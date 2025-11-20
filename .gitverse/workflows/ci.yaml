@@ -1,0 +1,47 @@
+name: CI/CD for build docker image in dbcv
+on:
+  push:
+#    tags:
+#      - "*"
+
+jobs:
+  build:
+    runs on: ubuntu-cloud-runner
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Docker via snap
+        run: |
+          apt-get update
+          apt-get install -y curl
+          curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-24.0.7.tgz -o docker.tgz
+          tar xzvf docker.tgz
+          mv docker/* /usr/bin/
+          docker --version
+          dockerd --iptables=false &
+          docker info
+
+#      - name: Install Docker Buildx
+#        run: |
+#          apt install docker-buildx-plugin
+
+
+#      - name: Set up Docker Buildx
+#        run: |
+#          docker buildx create --use  # Настройка Buildx для использования
+#          docker buildx version  # Проверка версии Buildx
+
+      - name: Build Docker image
+        run: |
+          docker build -t gitverse.ru/carbonfay/dbcv:latest -t gitverse.ru/carbonfay/dbcv:${GITHUB_REF#refs/tags/} -f backend/Dockerfile .  
+
+      - name: Push Docker images to GitVerse Registry
+        run: |
+          echo $GITVERSE_TOKEN | docker login gitverse.ru --username $GITVERSE_USERNAME --password-stdin
+          docker push gitverse.ru/carbonfay/dbcv:latest  # Пуш образа с тегом latest
+          docker push gitverse.ru/carbonfay/dbcv:${GITHUB_REF#refs/tags/}  # Пуш образа с тегом версии
+
+    env:
+      GITVERSE_USERNAME: ${{ secrets.GITVERSE_USERNAME }}  # Секреты для авторизации
+      GITVERSE_TOKEN: ${{ secrets.GITVERSE_TOKEN }}  # Токен для авторизации

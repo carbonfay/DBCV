@@ -1,0 +1,27 @@
+# MCP DBCV Server Dependencies
+
+# Core MCP
+mcp>=1.0.0
+
+# HTTP Client
+httpx>=0.25.0
+
+# Data validation
+pydantic>=2.0.0
+
+# Async support
+asyncio-mqtt>=0.13.0
+
+# Logging
+structlog>=23.0.0
+
+# OpenAI (for Responses API)
+openai>=1.0.0
+
+# FastAPI (for HTTP server)
+fastapi>=0.104.0
+uvicorn>=0.24.0
+
+# Development
+pytest>=7.0.0
+pytest-asyncio>=0.21.0

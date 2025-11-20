@@ -1,0 +1,35 @@
+# Safe libraries for integrations
+# Add these lines to main requirements.txt
+
+# Messaging
+python-telegram-bot>=20.0
+discord.py>=2.3.0
+
+# AI
+openai>=1.0.0
+yandexcloud>=0.1.0
+
+# Storage
+google-api-python-client>=2.0.0
+dropbox>=11.36.0
+
+# Maps
+googlemaps>=4.10.0
+
+# Payments
+stripe>=7.0.0
+yookassa>=2.3.0
+
+# CRM
+hubspot-api-client>=7.0.0
+
+# HTTP client for direct requests (already in requirements.txt)
+# httpx>=0.27.0
+
+# Note: For the following services use httpx for direct requests:
+# - Yandex Weather, Yandex Maps, Yandex News, Yandex Translate
+# - Bitrix24, AmoCRM
+# - Wildberries, Ozon
+# - NewsAPI
+# - PayPal (preferred)
+# - Medical reference APIs

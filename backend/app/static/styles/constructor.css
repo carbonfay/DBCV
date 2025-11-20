@@ -1,0 +1,27 @@
+.hidden {
+    display: none;
+}
+
+
+/* container */
+.rules-container {
+    display:flex;
+    flex-wrap:wrap;
+}
+
+/* columns */
+.rules-container > * {
+    width:100%;
+    padding:1rem;
+}
+
+
+/* tablet breakpoint */
+@media (min-width:768px) {
+    .rules-container > *:nth-child(1) {
+        width:calc(100% / 3 * 2);
+    }
+    .rules-container > *:nth-child(2) {
+        width:calc(100% / 3);
+    }
+}

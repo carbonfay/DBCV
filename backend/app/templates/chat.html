@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мини-чат</title>
+    <link rel="stylesheet" type="text/css" href="/static/styles/chat.css">
+</head>
+<body>
+<div class="chat-container">
+    <div class="channels" id="channelList">
+        <!-- Выводим остальных пользователей, исключая текущего пользователя -->
+        {% for chat in channels %}
+            <div class="channel" data-id="{{ chat.id }}">
+                {{ chat.name }}
+            </div>
+        {% endfor %}
+    </div>
+    <div class="chat-area">
+        <div class="chat-header" id="chatHeader">
+            <span>Мини-чат</span>
+            <button class="logout-button" id="logoutButton" onclick="logout()">Выход</button>
+        </div>
+        <div class="messages" id="messages">
+            <div class="welcome-message">Выберите канал</div>
+            <p>😊👋</p>
+        </div>
+        <div class="input-area hidden" id="input-area">
+            <input type="text" id="messageInput" placeholder="Введите сообщение..." disabled>
+            <button id="sendButton" disabled>Отправить</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const currentUserId = "{{ user.id }}";
+</script>
+
+<script src="/static/js/chat.js"></script>
+</body>
+</html>

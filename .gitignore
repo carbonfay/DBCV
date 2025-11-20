@@ -1,0 +1,13 @@
+.venv
+.idea
+.cursor
+__pycache__
+.cursorrules
+.cursor/plans
+.cursor/tasks
+.cursor/prompts
+.cursor/settings
+.cursor/settings.json
+.cursor/settings.jsonc
+env.dev
+env.prod

@@ -1,0 +1,271 @@
+﻿version: "3.8"
+
+services:
+  backend:
+    container_name: backend_dbcv
+    build:
+      context: ./backend
+      dockerfile: ./Dockerfile
+    hostname: backend_dbcv
+    networks:
+      - my_network
+    env_file:
+      - env.prod
+    ports:
+      - "8003:8003"
+    restart: always
+    command: sh -c "alembic upgrade head && python initial_data.py && python main.py"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      s3:
+        condition: service_healthy
+    environment:
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_PUBLIC_ENDPOINT=${S3_PUBLIC_ENDPOINT}
+      - S3_REGION=${S3_REGION}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - S3_BUCKET=${S3_BUCKET}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  mcp-dbcv:
+    container_name: mcp_dbcv
+    build:
+      context: ./backend/mcp
+      dockerfile: Dockerfile.http
+    env_file:
+      - env.prod
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      DBCV_BACKEND_URL: http://backend:8003
+      MCP_SERVER_URL: https://mcp.platform.eni7.ru
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ./backend/mcp:/app
+    networks:
+      - my_network
+    ports:
+      - "8005:8005"
+    restart: unless-stopped
+    command: ["python", "run_http_server.py"]
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres_dbcv
+    restart: always
+    networks:
+      - my_network
+    expose:
+      - "5433"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    command: -p 5433
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U dbcv_test -h 127.0.0.1 -p 5433" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  redis:
+    image: redis:latest
+    container_name: redis_dbcv
+    expose:
+      - "6379"
+    command: redis-server --maxmemory 2gb --maxmemory-policy noeviction
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - my_network
+
+  cache-redis:
+    image: redis:latest
+    container_name: cache_redis_dbcv
+    env_file:
+      - env.prod
+    expose:
+      - "6389"
+    networks:
+      - my_network
+    command: redis-server --maxmemory 1gb --maxmemory-policy noeviction --port 6389
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  faststream-bot:
+    build:
+      context: ./backend
+      dockerfile: ./Dockerfile.faststream
+    env_file:
+      - env.prod
+    environment:
+      - ROLE=bot
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_PUBLIC_ENDPOINT=${S3_PUBLIC_ENDPOINT}
+      - S3_REGION=${S3_REGION}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - S3_BUCKET=${S3_BUCKET}
+      - AWS_EC2_METADATA_DISABLED=true
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - my_network
+    command: faststream run faststream_app:app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "python3"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  faststream-user:
+    build:
+      context: ./backend
+      dockerfile: ./Dockerfile.faststream
+    env_file:
+      - env.prod
+    environment:
+      - ROLE=user
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_PUBLIC_ENDPOINT=${S3_PUBLIC_ENDPOINT}
+      - S3_REGION=${S3_REGION}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - S3_BUCKET=${S3_BUCKET}
+      - AWS_EC2_METADATA_DISABLED=true
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - my_network
+    command: faststream run faststream_app:app
+
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "python3"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: ./Dockerfile.faststream
+    container_name: scheduler_dbcv
+    env_file:
+      - env.prod
+    environment:
+      - DB_POOL_SIZE=${DB_POOL_SIZE}
+      - DB_MAX_OVERFLOW=${DB_MAX_OVERFLOW}
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_PUBLIC_ENDPOINT=${S3_PUBLIC_ENDPOINT}
+      - S3_REGION=${S3_REGION}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - S3_BUCKET=${S3_BUCKET}
+      - AWS_EC2_METADATA_DISABLED=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - my_network
+    command: python scheduler.py
+
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "python3"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  redis-monitor:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.redis_monitor
+    env_file:
+      - env.prod
+    container_name: redis_monitor_dbcv
+    depends_on:
+      - redis
+    networks:
+      - my_network
+    restart: unless-stopped
+
+  s3:
+    image: minio/minio:RELEASE.2024-09-22T00-33-43Z
+    container_name: s3_dbcv
+    command: server /data --console-address ":9002"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9002:9002"
+    volumes:
+      - s3_data:/data
+    networks:
+      - my_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  s3-init:
+    image: minio/mc:latest
+    container_name: s3_init_dbcv
+    depends_on:
+      s3:
+        condition: service_healthy
+    networks:
+      - my_network
+    entrypoint: >-
+      /bin/sh -c "
+      mc alias set local http://s3:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} &&
+      mc mb -p local/dbcv-media || true &&
+      mc anonymous set download local/dbcv-media || true &&
+      exit 0
+      "
+    restart: on-failure:3
+
+networks:
+  my_network:
+
+volumes:
+  s3_data:
