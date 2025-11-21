@@ -53,9 +53,8 @@
 ## Полезные ссылки
 
 - **[Документация GitVerse Wiki](https://gitverse.ru/carbonfay/DBCV/wiki/WIKIDBCV1-12)** — полная документация проекта на GitVerse
-- [STUDENT_GUIDE.md](./STUDENT_GUIDE.md) - главное руководство
+- [STUDENT_GUIDE.md](./STUDENT_GUIDE.md) - полное руководство для студентов со всеми шагами работы
 - [STUDENT_AI_PROMPT.md](./STUDENT_AI_PROMPT.md) - примеры промптов
-- [STUDENT_WORKFLOW.md](./STUDENT_WORKFLOW.md) - процесс работы
 - [INSTALLATION.md](./INSTALLATION.md) - установка окружения
 
 ---

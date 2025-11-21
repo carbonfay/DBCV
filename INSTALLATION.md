@@ -674,7 +674,7 @@ LOG_LEVEL=DEBUG
 
 После успешной установки:
 
-1. Изучить [STUDENT_WORKFLOW.md](./STUDENT_WORKFLOW.md) для понимания процесса работы
+1. Изучить [STUDENT_GUIDE.md](./STUDENT_GUIDE.md) для понимания процесса работы
 2. Изучить [STUDENT_AI_PROMPT.md](./STUDENT_AI_PROMPT.md) для работы с нейросетями
 3. Выбрать интеграцию из [TASK_DISTRIBUTION.md](./TASK_DISTRIBUTION.md)
 4. Начать реализацию!
