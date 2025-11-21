@@ -24,7 +24,7 @@ class TelegramSendMessageIntegration(BaseIntegration):
     def metadata(self) -> IntegrationMetadata:
         return IntegrationMetadata(
             id="telegram_send_message",
-            version="1.0.0",
+            version="1.0.1",
             name="Telegram Send Message",
             description="Отправка текстового сообщения в Telegram через Bot API",
             category="messaging",
