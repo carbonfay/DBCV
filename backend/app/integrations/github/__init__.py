@@ -1,7 +1,14 @@
 """GitHub интеграции."""
-from .get_issue import GitHubGetIssueIntegration
-from app.integrations.registry import registry
-
-registry.register(GitHubGetIssueIntegration())
-
-__all__ = ["GitHubGetIssueIntegration"]
+try:
+    from .get_issue import GitHubGetIssueIntegration
+    from .update_issue import GitHubUpdateIssueIntegration
+    from app.integrations.registry import registry
+    
+    registry.register(GitHubGetIssueIntegration())
+    registry.register(GitHubUpdateIssueIntegration())
+    __all__ = ["GitHubGetIssueIntegration", "GitHubUpdateIssueIntegration"]
+except ImportError as e:
+    # Если PyGithub не установлена, просто пропускаем
+    import warnings
+    warnings.warn(f"GitHub integration not available: {e}")
+    __all__ = []

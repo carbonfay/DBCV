@@ -1,10 +1,12 @@
 """GitHub Get Issue интеграция используя PyGithub библиотеку."""
-from typing import Dict, Any
+from typing import Dict, Any, TYPE_CHECKING
 from uuid import UUID
 
 from app.integrations.base import BaseIntegration, IntegrationMetadata
-from app.auth.credentials_resolver import CredentialsResolver
-from app.loggers.bot import BotLogger
+
+if TYPE_CHECKING:
+    from app.auth.credentials_resolver import CredentialsResolver
+    from app.loggers.bot import BotLogger
 
 # Импортируем библиотеку НАПРЯМУЮ в backend код
 try:
@@ -51,8 +53,8 @@ class GitHubGetIssueIntegration(BaseIntegration):
                     }
                 }
             },
-            credentials_provider="github",
-            credentials_strategy="api_key",
+            credentials_provider="other",
+            credentials_strategy="none",
             library_name="PyGithub>=2.0.0" if GITHUB_AVAILABLE else None,
             examples=[
                 {
@@ -69,9 +71,9 @@ class GitHubGetIssueIntegration(BaseIntegration):
     async def execute(
         self,
         config: Dict[str, Any],
-        credentials_resolver: CredentialsResolver,
+        credentials_resolver: "CredentialsResolver",
         bot_id: UUID,
-        logger: BotLogger
+        logger: "BotLogger"
     ) -> Dict[str, Any]:
         """
         Выполняет интеграцию используя библиотеку PyGithub.
@@ -98,7 +100,7 @@ class GitHubGetIssueIntegration(BaseIntegration):
         # Получаем token из credentials
         creds = await credentials_resolver.get_default_for(
             bot_id=bot_id,
-            provider="github",
+            provider="other",
             strategy="api_key"
         )
         
