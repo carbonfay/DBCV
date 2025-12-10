@@ -6,5 +6,11 @@ except ImportError:
     # Библиотека не установлена, пропускаем
     pass
 
+try:
+    from app.integrations.yandex_weather_get_forecast import *  # noqa: F401, F403
+except ImportError:
+    # Библиотека не установлена, пропускаем
+    pass
+
 # Внутренние интеграции DBCV
 from app.integrations.dbcv import *  # noqa: F401, F403

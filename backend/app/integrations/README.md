@@ -130,3 +130,60 @@ except ImportError:
 
 См. примеры тестов в `backend/app/tests/integrations/`.
 
+## Пример: Yandex Weather Get Forecast
+
+Пример использования интеграции `yandex_weather_get_forecast`.
+
+- Integration ID: `yandex_weather_get_forecast`
+- Credentials provider: `yandex_weather` (strategy: `api_key`)
+
+Пример конфигурации (дневной прогноз по координатам):
+
+```json
+{
+    "latitude": 55.75,
+    "longitude": 37.62,
+    "lang": "ru_RU",
+    "extra": false,
+    "hours": false,
+    "limit": 3
+}
+```
+
+Пример конфигурации (почасовой прогноз с дополнительными данными):
+
+```json
+{
+    "latitude": 59.93,
+    "longitude": 30.33,
+    "lang": "ru_RU",
+    "extra": true,
+    "hours": true,
+    "limit": 2
+}
+```
+
+Пример ожидаемого результата (успех):
+
+```json
+{
+    "response": {
+        "ok": true,
+        "result": {
+            "now": 1600000000,
+            "now_dt": "2020-09-13T12:00:00Z",
+            "forecasts": [ ... ],
+            "info": {"lat": 55.75, "lon": 37.62 }
+        }
+    }
+}
+```
+
+Если API ключ недоступен, интеграция вернёт:
+
+```json
+{ "response": { "ok": false, "error_code": 401, "description": "Yandex Weather API key not found in credentials" } }
+```
+
+Добавлены тесты: `backend/app/tests/integrations/test_yandex_weather.py` (мок httpx).
+
