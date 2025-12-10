@@ -5,7 +5,7 @@ from typing import Mapping, Any, Optional
 from app.auth.cache import TokenCache
 from app.auth.providers.google_provider import GoogleProvider
 from app.auth.providers.amocrm_provider import AmoCrmProvider
-from app.auth.providers.yandex_provider import YandexCloudProvider, YandexIdOAuthProvider
+from app.auth.providers.yandex_provider import YandexCloudProvider, YandexIdOAuthProvider, YandexMapsApiKeyProvider
 
 
 class AuthService:
@@ -17,6 +17,7 @@ class AuthService:
             "amocrm": AmoCrmProvider(),
             "yandex_cloud": YandexCloudProvider(),
             "yandex_id": YandexIdOAuthProvider(),
+            "yandex_maps": YandexMapsApiKeyProvider(),
         }
 
     async def apply(
@@ -76,6 +77,8 @@ class AuthService:
             return "amocrm", hints
         if "yandexcloud.net" in host or "cloud.yandex" in host:
             return "yandex_cloud", hints
+        if "api.routing.yandex.net" in host or "maps.yandex.ru" in host:
+            return "yandex_maps", hints
         if host.startswith("api-metrika.yandex."):
             return "yandex_id", hints
         return None, hints
