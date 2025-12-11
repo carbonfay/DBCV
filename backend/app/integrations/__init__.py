@@ -8,3 +8,10 @@ except ImportError:
 
 # Внутренние интеграции DBCV
 from app.integrations.dbcv import *  # noqa: F401, F403
+
+# OpenWeatherMap интеграции
+try:
+    from app.integrations.openweathermap import *  # noqa: F401, F403
+except ImportError:
+    # Библиотека не установлена, пропускаем
+    pass
