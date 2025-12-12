@@ -26,7 +26,7 @@ class TelegramSendPhotoIntegration(BaseIntegration):
     def metadata(self) -> IntegrationMetadata:
         return IntegrationMetadata(
             id="telegram_send_photo",
-            version="1.0.2",
+            version="1.0.3",
             name="Telegram Send Photo",
             description="Отправка изображения (URL, file_id или файл) в Telegram через Bot API",
             category="messaging",
