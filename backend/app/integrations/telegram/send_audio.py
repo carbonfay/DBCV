@@ -23,6 +23,16 @@ except (ImportError, AttributeError):
 class TelegramSendAudioIntegration(BaseIntegration):
     """Интеграция для отправки аудио в Telegram через python-telegram-bot."""
 
+    @staticmethod
+    def _failure(description: str, error_code: int) -> Dict[str, Any]:
+        return {
+            "response": {
+                "ok": False,
+                "error_code": error_code,
+                "description": description,
+            }
+        }
+
     @property
     def metadata(self) -> IntegrationMetadata:
         return IntegrationMetadata(
@@ -112,13 +122,7 @@ class TelegramSendAudioIntegration(BaseIntegration):
     ) -> Dict[str, Any]:
         if not TELEGRAM_BOT_AVAILABLE:
             await logger.error("python-telegram-bot library is not available")
-            return {
-                "response": {
-                    "ok": False,
-                    "error_code": 500,
-                    "description": "python-telegram-bot library is not installed",
-                }
-            }
+            return self._failure("python-telegram-bot library is not installed", 500)
 
         creds = await credentials_resolver.get_default_for(
             bot_id=bot_id,
@@ -128,25 +132,13 @@ class TelegramSendAudioIntegration(BaseIntegration):
 
         if not creds:
             await logger.error("Telegram credentials not found")
-            return {
-                "response": {
-                    "ok": False,
-                    "error_code": 401,
-                    "description": "Telegram bot_token not found in credentials",
-                }
-            }
+            return self._failure("Telegram bot_token not found in credentials", 401)
 
         payload = creds.get("payload") or creds
         bot_token = payload.get("bot_token") or payload.get("token")
         if not bot_token:
             await logger.error(f"bot_token not found in credentials. Available keys: {list(payload.keys())}")
-            return {
-                "response": {
-                    "ok": False,
-                    "error_code": 401,
-                    "description": "bot_token not found in credentials",
-                }
-            }
+            return self._failure("bot_token not found in credentials", 401)
 
         chat_id = config.get("chat_id")
         audio_file_id = config.get("audio_file_id")
@@ -154,42 +146,46 @@ class TelegramSendAudioIntegration(BaseIntegration):
 
         if not chat_id:
             await logger.error("chat_id is required")
-            return {
-                "response": {
-                    "ok": False,
-                    "error_code": 400,
-                    "description": "chat_id is required",
-                }
-            }
+            return self._failure("chat_id is required", 400)
+
+        if audio_file_id and audio_url:
+            await logger.error("Provide either audio_file_id or audio_url, not both")
+            return self._failure("Specify only one of audio_file_id or audio_url", 400)
 
         audio_source: Optional[str] = audio_file_id or audio_url
         if not audio_source:
             await logger.error("audio_file_id or audio_url is required")
-            return {
-                "response": {
-                    "ok": False,
-                    "error_code": 400,
-                    "description": "Specify audio_file_id or audio_url",
-                }
-            }
+            return self._failure("Specify audio_file_id or audio_url", 400)
 
         caption = config.get("caption")
         parse_mode = config.get("parse_mode")
         title = config.get("title")
         performer = config.get("performer")
         duration = config.get("duration")
-        duration_value = int(duration) if duration is not None else None
+        duration_value: Optional[int] = None
+        if duration is not None:
+            try:
+                duration_value = int(duration)
+                if duration_value < 0:
+                    raise ValueError
+            except (TypeError, ValueError):
+                await logger.error("duration must be a non-negative integer")
+                return self._failure("duration must be a non-negative integer", 400)
 
         try:
             bot = Bot(token=bot_token)
+            send_kwargs = {
+                "chat_id": str(chat_id),
+                "audio": str(audio_source),
+                "caption": str(caption) if caption else None,
+                "parse_mode": parse_mode if caption and parse_mode else None,
+                "title": str(title) if title else None,
+                "performer": str(performer) if performer else None,
+                "duration": duration_value,
+            }
+            send_kwargs = {key: value for key, value in send_kwargs.items() if value is not None}
             result = await bot.send_audio(
-                chat_id=str(chat_id),
-                audio=str(audio_source),
-                caption=str(caption) if caption else None,
-                parse_mode=parse_mode if caption and parse_mode else None,
-                title=str(title) if title else None,
-                performer=str(performer) if performer else None,
-                duration=duration_value,
+                **send_kwargs,
             )
 
             return {
@@ -208,7 +204,7 @@ class TelegramSendAudioIntegration(BaseIntegration):
                             "file_size": result.audio.file_size if result.audio else None,
                         },
                         "caption": result.caption,
-                        "date": result.date,
+                        "date": result.date.isoformat() if result.date else None,
                     },
                 }
             }
