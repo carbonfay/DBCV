@@ -3,6 +3,8 @@ import logging
 import os
 from uuid import uuid4
 
+import app.integrations
+
 from faststream import FastStream
 from faststream.redis import StreamSub
 from app.broker import broker

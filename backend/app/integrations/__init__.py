@@ -1,10 +1,13 @@
 """Интеграции с внешними сервисами."""
-# Автоматическая регистрация интеграций при импорте
+
+# --- TELEGRAM ---
 try:
     from app.integrations.telegram import *  # noqa: F401, F403
 except ImportError:
-    # Библиотека не установлена, пропускаем
     pass
+
+# --- VK ---
+from app.integrations.vk import *
 
 # Внутренние интеграции DBCV
 from app.integrations.dbcv import *  # noqa: F401, F403
