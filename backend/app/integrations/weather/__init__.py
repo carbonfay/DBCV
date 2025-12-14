@@ -1,0 +1,16 @@
+"""Weather интеграции."""
+from .current_weather import OpenWeatherMapCurrentWeatherIntegration
+from .get_hourly_forecast import OpenWeatherMapGetHourlyForecastIntegration
+from .get_daily_forecast import OpenWeatherMapGetDailyForecastIntegration
+from .get_weather_history import OpenWeatherMapGetWeatherHistoryIntegration
+from .get_current_weather import OpenWeatherMapGetCurrentWeatherIntegration
+from .get_uv_index import OpenWeatherMapGetUVIndexIntegration
+from app.integrations.registry import registry
+
+# Автоматическая регистрация интеграций
+registry.register(OpenWeatherMapCurrentWeatherIntegration())
+registry.register(OpenWeatherMapGetHourlyForecastIntegration())
+registry.register(OpenWeatherMapGetDailyForecastIntegration())
+registry.register(OpenWeatherMapGetWeatherHistoryIntegration())
+registry.register(OpenWeatherMapGetCurrentWeatherIntegration())
+registry.register(OpenWeatherMapGetUVIndexIntegration())
