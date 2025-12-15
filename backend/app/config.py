@@ -79,15 +79,15 @@ class Settings(BaseSettings):
     EMITTER_STREAM_NAME: str = "emitters"
     EMITTER_STREAM_GROUP: str = "emitters_group"
 
-    DB_POOL_SIZE: int = int(os.getenv("DB_POOL_SIZE") or 10)
-    DB_MAX_OVERFLOW: int = int(os.getenv("DB_MAX_OVERFLOW") or 10)
+    DB_POOL_SIZE: int = int(os.getenv("DB_POOL_SIZE", 10))
+    DB_MAX_OVERFLOW: int = int(os.getenv("DB_MAX_OVERFLOW", 10))
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://redis:6379/0")
     CACHE_REDIS_URL: str = os.getenv("CACHE_REDIS_URL", "redis://cache-redis:6389/0")
     PROXIES: str = os.getenv("PROXIES", "")
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 
     MCP_SERVICE_URL: str = os.getenv("MCP_SERVICE_URL", "http://mcp-dbcv:8005")
-    MCP_HTTP_TIMEOUT: float = float(os.getenv("MCP_HTTP_TIMEOUT") or "60")
+    MCP_HTTP_TIMEOUT: float = float(os.getenv("MCP_HTTP_TIMEOUT", "60"))
     MCP_SERVICE_TOKEN: str = os.getenv("MCP_SERVICE_TOKEN", "")
 
     @property

@@ -80,36 +80,18 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
 )
 
-# CORS middleware must be added BEFORE routers to handle all requests
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173", "http://127.0.0.1:3000"],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-)
-
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     tb = traceback.format_exc()
     logger.error(f"Unhandled error: {exc}\n{tb}")
-    response = JSONResponse(
+    return JSONResponse(
         status_code=500,
         content={
             "detail": "Internal Server Error",
             "error": str(exc),
         },
     )
-    # Add CORS headers to error response
-    origin = request.headers.get("origin")
-    if origin and origin in ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173", "http://127.0.0.1:3000"]:
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-    return response
 
 
 app.mount('/static', StaticFiles(directory=settings.STATIC_ROOT), name='static')
@@ -122,6 +104,15 @@ app.mount("/admin", admin_app)
 @app.get("/health", tags=["health"])
 async def healthcheck():
     return JSONResponse(content={"status": "ok"})
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins; restrict in production.
+    allow_credentials=False,
+    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, PUT, DELETE, ...).
+    allow_headers=["*"],  # Allow all headers.
+)
 
 
 if __name__ == "__main__":
