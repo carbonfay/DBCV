@@ -20,9 +20,9 @@ from mcp.types import (
     ListToolsResult,
 )
 
-from config import config
-from client import DBCVAPIClient
-from tools import BotTools, StepTools, RequestTools, ConnectionTools
+from mcp.config import config
+from mcp.client import DBCVAPIClient
+from mcp.tools import BotTools, StepTools, RequestTools, ConnectionTools
 
 # Configure logging
 logging.basicConfig(

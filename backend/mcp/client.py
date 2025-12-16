@@ -9,8 +9,8 @@ from uuid import UUID
 import httpx
 from httpx import AsyncClient, HTTPError
 
-from config import config
-from schemas import (
+from mcp.config import config
+from mcp.schemas import (
     BotInfo, BotCreate, BotUpdate,
     StepInfo, StepCreate, StepUpdate,
     RequestInfo, RequestCreate, RequestUpdate,
