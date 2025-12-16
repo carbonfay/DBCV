@@ -10,12 +10,14 @@ from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 class Provider(str, Enum):
     google = "google"
+    google_maps = "google_maps"
     amocrm = "amocrm"
     yandex_cloud = "yandex_cloud"
     yandex_id = "yandex_id"
     telegram = "telegram"
     discord = "discord"
     openai = "openai"
+    newsapi = "newsapi"
     other = "other"
 
 

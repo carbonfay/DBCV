@@ -53,8 +53,8 @@ def _get_all_providers() -> List[ProviderInfo]:
         ProviderInfo(
             value="google",
             label="Google",
-            description="Google сервисы (Drive, Sheets, Classroom, OAuth)",
-            supported_strategies=["service_account", "oauth"],
+            description="Google сервисы (Drive, Sheets, Classroom, OAuth, API keys)",
+            supported_strategies=["service_account", "oauth", "api_key"],
             payload_examples={
                 "service_account": {
                     "type": "service_account",
@@ -71,6 +71,20 @@ def _get_all_providers() -> List[ProviderInfo]:
                     "client_secret": "your-client-secret",
                     "refresh_token": "your-refresh-token",
                     "access_token": "your-access-token"
+                },
+                "api_key": {
+                    "api_key": "AIzaSy..."
+                }
+            }
+        ),
+        ProviderInfo(
+            value="google_maps",
+            label="Google Maps",
+            description="Google Maps Platform (Places/Geocoding/etc)",
+            supported_strategies=["api_key"],
+            payload_examples={
+                "api_key": {
+                    "api_key": "AIzaSy..."
                 }
             }
         ),
@@ -100,6 +114,17 @@ def _get_all_providers() -> List[ProviderInfo]:
             payload_examples={
                 "api_key": {
                     "bot_token": "YOUR_BOT_TOKEN_HERE"
+                }
+            }
+        ),
+        ProviderInfo(
+            value="newsapi",
+            label="NewsAPI",
+            description="NewsAPI.org",
+            supported_strategies=["api_key"],
+            payload_examples={
+                "api_key": {
+                    "api_key": "YOUR_NEWSAPI_KEY_HERE"
                 }
             }
         ),
@@ -181,4 +206,3 @@ async def get_strategies(
             return StrategiesResponse(strategies=strategies)
     
     return StrategiesResponse(strategies=all_strategies)
-
