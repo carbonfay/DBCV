@@ -44,11 +44,11 @@ class Bitrix24GetDealIntegration(BaseIntegration):
                     }
                 }
             },
-            credentials_provider="bitrix24",
+            credentials_provider="other",
             # Bitrix24 может работать через OAuth или Webhook/API key —
             # указываем наиболее частую стратегию OAuth (внешний токен).
             credentials_strategy="oauth",
-            library_name="httpx",
+            library_name=None,
             examples=[
                 {
                     "title": "Получить сделку по ID",
@@ -78,7 +78,7 @@ class Bitrix24GetDealIntegration(BaseIntegration):
         strategy = self.metadata.credentials_strategy or "oauth"
         creds = await credentials_resolver.get_default_for(
             bot_id=bot_id,
-            provider="bitrix24",
+            provider="other",
             strategy=strategy
         )
 
@@ -86,8 +86,8 @@ class Bitrix24GetDealIntegration(BaseIntegration):
             # Попытка fallback на api_key
             creds = await credentials_resolver.get_default_for(
                 bot_id=bot_id,
-                provider="bitrix24",
-                strategy="api_key"
+                provider="other",
+                strategy="oauth"
             )
 
         if not creds:
