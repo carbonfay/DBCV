@@ -8,10 +8,10 @@ from app.loggers.bot import BotLogger
 
 # Проверяем доступность библиотеки
 try:
-    import googleapiclient
     from googleapiclient.discovery import build
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
+    from google.oauth2.service_account import Credentials as SvcAccountCredentials
     GOOGLE_API_CLIENT_AVAILABLE = True
 except ImportError:
     GOOGLE_API_CLIENT_AVAILABLE = False
@@ -19,6 +19,7 @@ except ImportError:
     build = None
     Request = None
     Credentials = None
+    SvcAccountCredentials = None
 
 
 class GoogleClassroomCreateCourseIntegration(BaseIntegration):
@@ -100,7 +101,7 @@ class GoogleClassroomCreateCourseIntegration(BaseIntegration):
         logger: BotLogger
     ) -> Dict[str, Any]:
         """
-        Выполняет интеграцию используя библиотеку google-api-python-client и GoogleProvider.
+        Выполняет интеграцию используя библиотеку google-api-python-client.
 
         Args:
             config: Параметры интеграции
@@ -121,18 +122,16 @@ class GoogleClassroomCreateCourseIntegration(BaseIntegration):
                 }
             }
 
-        # Получаем токен через GoogleProvider через credentials_resolver
-        # Используем hints для указания требуемых scopes для Google Classroom API
-        hints = {
-            "scopes": ["https://www.googleapis.com/auth/classroom.courses"]
-        }
-
         # Получаем credentials из резолвера
         creds = await credentials_resolver.get_default_for(
             bot_id=bot_id,
             provider="google",
             strategy=None  # Провайдер сам определит стратегию
         )
+
+        payload = creds.get("payload", {})
+        if not payload:
+            payload = creds
 
         if not creds:
             await logger.error("Google credentials not found")
@@ -144,75 +143,82 @@ class GoogleClassroomCreateCourseIntegration(BaseIntegration):
                 }
             }
 
-        # Теперь используем GoogleProvider напрямую для получения токена с нужными scopes
+        credentials_type = payload.get("type")
+
         try:
-            from app.auth.providers import GoogleProvider
-            provider = GoogleProvider()
+            if credentials_type == "service_account":
+                # Используем service account credentials
+                info = {
+                    "type": payload.get("type"),
+                    "project_id": payload.get("project_id"),
+                    "private_key_id": payload.get("private_key_id"),
+                    "private_key": payload.get("private_key"),
+                    "client_email": payload.get("client_email"),
+                    "client_id": payload.get("client_id"),
+                    "auth_uri": payload.get("auth_uri", "https://accounts.google.com/o/oauth2/auth"),
+                    "token_uri": payload.get("token_uri", "https://oauth2.googleapis.com/token"),
+                    "auth_provider_x509_cert_url": payload.get("auth_provider_x509_cert_url", "https://www.googleapis.com/oauth2/v1/certs"),
+                    "client_x509_cert_url": payload.get("client_x509_cert_url"),
+                    "universe_domain": payload.get("universe_domain", "googleapis.com")
+                }
 
-            # Подготовим конфиг для провайдера
-            payload = creds.get("payload", {})
-            if not payload:
-                payload = creds
+                # Создаем credentials объект для service account
+                credentials = SvcAccountCredentials.from_service_account_info(
+                    info,
+                    scopes=["https://www.googleapis.com/auth/classroom.courses"]
+                )
+            else:
+                # Для OAuth используем объект Credentials с необходимыми полями
+                access_token = payload.get("access_token")
+                refresh_token = payload.get("refresh_token")
+                client_id = payload.get("client_id")
+                client_secret = payload.get("client_secret")
+                token_uri = payload.get("token_uri", "https://oauth2.googleapis.com/token")
 
-            creds_cfg = {
-                "strategy": creds.get("strategy", "service_account"),
-                "payload": payload,
-                "scopes": ["https://www.googleapis.com/auth/classroom.courses"]
-            }
+                if not all([access_token, refresh_token, client_id, client_secret]):
+                    await logger.error("Missing required OAuth fields (refresh_token, client_id, client_secret)")
+                    return {
+                        "response": {
+                            "ok": False,
+                            "error_code": 401,
+                            "description": "Missing required OAuth fields (refresh_token, client_id, client_secret)"
+                        }
+                    }
 
-            # Создаем фейковый кэш
-            class DummyCache:
-                def get(self, **kwargs): return None
-                def put(self, **kwargs): pass
-            dummy_cache = DummyCache()
+                # Создаем объект Credentials с необходимыми полями для обновления
+                credentials = Credentials(
+                    token=access_token,
+                    refresh_token=refresh_token,
+                    token_uri=token_uri,
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    scopes=["https://www.googleapis.com/auth/classroom.courses"]
+                )
 
-            token = await provider.ensure(
-                bot_id=str(bot_id),
-                profile="default",
-                creds_cfg=creds_cfg,
-                profile_state=None,
-                hints=hints,
-                cache=dummy_cache
-            )
-
-        except ImportError:
-            await logger.error("GoogleProvider not found")
+        except (ValueError, KeyError) as e:
+            await logger.error(f"Error creating Google credentials: {e}")
             return {
                 "response": {
                     "ok": False,
-                    "error_code": 500,
-                    "description": "GoogleProvider not found"
-                }
-            }
-        except Exception as e:
-            await logger.error(f"Error getting Google credentials: {e}")
-            return {
-                "response": {
-                    "ok": False,
-                    "error_code": 500,
-                    "description": f"Error getting Google credentials: {str(e)}"
+                    "error_code": 401,
+                    "description": f"Invalid Google credentials: {str(e)}"
                 }
             }
 
-        # Создаем объект Credentials для google-api-python-client
-        try:
-            credentials = Credentials(
-                token=token.access_token,
-                refresh_token=creds.get("payload", {}).get("refresh_token"), # Для OAuth
-                token_uri="https://oauth2.googleapis.com/token  ",
-                client_id=creds.get("payload", {}).get("client_id"), # Для OAuth
-                client_secret=creds.get("payload", {}).get("client_secret"), # Для OAuth
-                scopes=["https://www.googleapis.com/auth/classroom.courses"]
-            )
-        except Exception as e:
-            await logger.error(f"Error creating Google credentials object: {e}")
-            return {
-                "response": {
-                    "ok": False,
-                    "error_code": 500,
-                    "description": f"Error creating Google credentials object: {str(e)}"
+        # Проверяем валидность credentials перед созданием сервиса
+        if not credentials.valid:
+            try:
+                request = Request()
+                credentials.refresh(request)
+            except Exception as e:
+                await logger.error(f"Failed to refresh credentials: {e}")
+                return {
+                    "response": {
+                        "ok": False,
+                        "error_code": 401,
+                        "description": f"Failed to refresh credentials: {str(e)}"
+                    }
                 }
-            }
 
         # Создаем сервис Google Classroom
         try:
