@@ -116,8 +116,8 @@ class YooKassaGetReceiptIntegration(BaseIntegration):
                 return {"response": {"ok": False, "error_code": 400, "description": "receipt_id is required"}}
             
             # Выполняем запрос на получение чека
-            # Используем find(receipt_id)
-            receipt = Receipt.find(receipt_id)
+            # Используем find_one(receipt_id)
+            receipt = Receipt.find_one(receipt_id)
             
             # Сериализуем результат
             result_dict = {}
