@@ -5,5 +5,4 @@ __all__ = [
     "GitHubCreateRepositoryIntegration",
 ]
 
-# Регистрируем только реализованную интеграцию создания репозитория
 registry.register(GitHubCreateRepositoryIntegration())
