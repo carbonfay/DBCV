@@ -216,13 +216,6 @@ class GitHubGetIssueIntegration(BaseIntegration):
                 formatted_issue = self._build_issue_payload(issue_payload, owner, repo)
                 result: Dict[str, Any] = {"issue": formatted_issue}
 
-                # Логирование полученных данных Issue
-                try:
-                    issue_data_str = json.dumps(formatted_issue, ensure_ascii=False, indent=2)
-                    await logger.info(f"GitHub Issue data received:\n{issue_data_str}")
-                except Exception as e:
-                    await logger.warning(f"Failed to log issue data: {e}")
-
                 rate_limit = self._extract_rate_limit(issue_response.headers)
                 if rate_limit:
                     result["rate_limit"] = rate_limit
