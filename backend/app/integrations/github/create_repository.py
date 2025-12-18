@@ -28,7 +28,7 @@ class GitHubCreateRepositoryIntegration(BaseIntegration):
                     "name": {
                         "type": "string",
                         "title": "Repository name",
-                        "description": "Имя репозитория (например, my-new-repo)."
+                        "description": "Имя репозитория (например, my-new-repo).",
                     },
                     "description": {
                         "type": "string",
@@ -54,8 +54,9 @@ class GitHubCreateRepositoryIntegration(BaseIntegration):
                     },
                 },
             },
-            credentials_provider="github",
-            credentials_strategy="api_key", 
+            # ВАЖНО: используем существующий провайдер other + api_key
+            credentials_provider="other",
+            credentials_strategy="api_key",
             library_name="httpx>=0.24.0",
             examples=[
                 {
@@ -77,10 +78,10 @@ class GitHubCreateRepositoryIntegration(BaseIntegration):
         bot_id: UUID,
         logger: BotLogger,
     ) -> Dict[str, Any]:
-        
+
         creds = await credentials_resolver.get_default_for(
             bot_id=bot_id,
-            provider="github",
+            provider="other",
             strategy="api_key",
         )
 

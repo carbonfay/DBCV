@@ -1,8 +1,8 @@
 from typing import Dict, Any
 from uuid import UUID
-import base64
-import json
 
+import json
+import base64
 import httpx
 
 from app.integrations.base import BaseIntegration, IntegrationMetadata
@@ -11,16 +11,17 @@ from app.loggers.bot import BotLogger
 
 
 class YooKassaCancelPaymentIntegration(BaseIntegration):
+
     @property
     def metadata(self) -> IntegrationMetadata:
         return IntegrationMetadata(
-            id="yookassa.cancel_payment",  
+            id="yookassa.cancel_payment",
             version="1.0.0",
             name="YooKassa: Cancel payment",
-            description="Отмена платежа в YooKassa по идентификатору платежа.",
+            description="Отменяет платёж в YooKassa по идентификатору платежа.",
             category="payments",
             icon_s3_key="icons/integrations/yookassa.svg",
-            color="#1F6FEB",
+            color="#00A3E0",
             config_schema={
                 "type": "object",
                 "required": ["payment_id"],
@@ -28,38 +29,18 @@ class YooKassaCancelPaymentIntegration(BaseIntegration):
                     "payment_id": {
                         "type": "string",
                         "title": "Payment ID",
-                        "description": (
-                            "Идентификатор платежа YooKassa "
-                            "(например, 2f9d2f1e-000f-5000-9000-1a2b3c4d5e6f)."
-                        ),
-                    },
-                    "reason": {
-                        "type": "string",
-                        "title": "Reason",
-                        "description": "Причина отмены, попадёт в описание операции.",
+                        "description": "Идентификатор платежа в YooKassa.",
                     },
                     "idempotence_key": {
                         "type": "string",
                         "title": "Idempotence key",
-                        "description": (
-                            "Идентификатор идемпотентного запроса. "
-                            "Если не задан, будет сгенерирован автоматически."
-                        ),
+                        "description": "Ключ идемпотентности запроса. Если не указан, будет сгенерирован автоматически.",
                     },
                 },
             },
-            credentials_provider="yookassa",
+            credentials_provider="other",
             credentials_strategy="api_key",
             library_name="httpx>=0.24.0",
-            examples=[
-                {
-                    "title": "Отмена платежа по payment_id",
-                    "config": {
-                        "payment_id": "2f9d2f1e-000f-5000-9000-1a2b3c4d5e6f",
-                        "reason": "Покупатель отменил заказ",
-                    },
-                }
-            ],
         )
 
     async def execute(
@@ -69,10 +50,9 @@ class YooKassaCancelPaymentIntegration(BaseIntegration):
         bot_id: UUID,
         logger: BotLogger,
     ) -> Dict[str, Any]:
-        # 1. Достаём креды
         creds = await credentials_resolver.get_default_for(
             bot_id=bot_id,
-            provider="yookassa",
+            provider="other",
             strategy="api_key",
         )
 
