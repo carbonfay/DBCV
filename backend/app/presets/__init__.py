@@ -1,17 +1,8 @@
-"""Модуль presets для создания типовых шагов."""
-from app.presets.registry import registry, PresetRegistry
-from app.presets.base import BasePreset, PresetMetadata
-from app.presets.conditional import IfPreset
+"""Presets интеграции."""
+from .loop import LoopPreset
+from .parallel import ParallelPreset
+from app.presets.registry import registry
 
-# Регистрируем все presets
-if_preset = IfPreset()
-registry.register(if_preset)
-
-__all__ = [
-    "registry",
-    "PresetRegistry",
-    "BasePreset",
-    "PresetMetadata",
-    "IfPreset",
-]
-
+# Автоматическая регистрация пресетов
+registry.register(LoopPreset())
+registry.register(ParallelPreset())
