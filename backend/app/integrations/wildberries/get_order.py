@@ -113,15 +113,16 @@ class WildberriesGetOrderIntegration(BaseIntegration):
             payload = creds
         
         # Получаем API token - может быть под разными ключами
-        api_token = payload.get("api_token") or payload.get("token") or payload.get("api_key")
-        
-        if not api_token:
-            await logger.error(f"API token not found in credentials. Available keys: {list(payload.keys())}")
+        # Предпочитаем `api_key` как каноническое поле, но принимаем `api_token` и `token` как fallback.
+        api_key = payload.get("api_key") or payload.get("api_token") or payload.get("token")
+
+        if not api_key:
+            await logger.error(f"API key not found in credentials. Available keys: {list(payload.keys())}")
             return {
                 "response": {
                     "ok": False,
                     "error_code": 401,
-                    "description": "API token not found in credentials"
+                    "description": "API key not found in credentials"
                 }
             }
         
@@ -130,8 +131,11 @@ class WildberriesGetOrderIntegration(BaseIntegration):
             async with httpx.AsyncClient() as client:
                 # Получаем заказ из Wildberries API
                 # Wildberries API использует Authorization header с X-API-KEY
+                # Устанавливаем X-API-KEY как основной заголовок (Wildberries spec),
+                # оставляем Authorization для обратной совместимости.
                 headers = {
-                    "Authorization": f"Bearer {api_token}",
+                    "X-API-KEY": api_key,
+                    "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json"
                 }
                 

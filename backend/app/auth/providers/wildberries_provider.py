@@ -37,12 +37,13 @@ class WildberriesProvider:
         if cached:
             return cached
 
-        # Получить API ключ из payload
+        # Получить API ключ из payload. Стандартизируем на `api_key`, но
+        # поддерживаем `api_token` и `token` для обратной совместимости.
         payload = creds_cfg.get("payload", {})
-        api_token = payload.get("api_token") or payload.get("api_key")
-        
+        api_token = payload.get("api_key") or payload.get("api_token") or payload.get("token")
+
         if not api_token:
-            raise RuntimeError("wildberries: missing api_token or api_key in payload")
+            raise RuntimeError("wildberries: missing api_key (or api_token) in payload")
 
         # Для API ключа просто создаем токен с длительным сроком действия
         # API ключи не имеют срока действия, но добавляем для совместимости
@@ -68,4 +69,7 @@ class WildberriesProvider:
 
     def apply_headers(self, headers: dict, token: AccessToken, hints: Mapping[str, Any]) -> None:
         """Применить токен в заголовки."""
-        headers["Authorization"] = f"{token.token_type} {token.access_token}"
+        # По спецификации Wildberries используется X-API-KEY (или X-Api-Key).
+        # Ставим основной заголовок `X-API-KEY`, и добавляем `Authorization` как fallback.
+        headers["X-API-KEY"] = token.access_token
+        headers.setdefault("Authorization", f"{token.token_type} {token.access_token}")

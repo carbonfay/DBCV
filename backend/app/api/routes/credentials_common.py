@@ -127,7 +127,6 @@ def _get_all_providers() -> List[ProviderInfo]:
             supported_strategies=["api_key"],
             payload_examples={
                 "api_key": {
-                    "api_token": "YOUR_API_TOKEN",
                     "api_key": "YOUR_API_KEY"
                 }
             }
