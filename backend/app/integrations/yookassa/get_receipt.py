@@ -76,7 +76,7 @@ class YooKassaGetReceiptIntegration(BaseIntegration):
             }
         
         # Получаем credentials
-        creds = await credentials_resolver.get_default_for(
+        creds = await credentials_resolver.get_single_for(
             bot_id=bot_id,
             provider="yookassa",
             strategy="api_key"
