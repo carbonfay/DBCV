@@ -564,7 +564,9 @@ async def check_message(message: dict, channel_id: UUID | str | None = None):
     recipient_id = message_obj.get("recipient_id")
     sender_id = message_obj.get("sender_id")
     if not recipient_id:
+        logger.info(f"Channel data: {channel}")
         default_bot_id = channel.get("default_bot_id")
+        logger.info(f"Default bot ID from channel: {default_bot_id}")
         bot = await data_manager.get_bot(default_bot_id)
         try:
             message_processor = MessageProcessor(sender_id, bot, channel, message, data_manager)
