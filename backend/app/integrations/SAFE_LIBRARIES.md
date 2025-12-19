@@ -293,7 +293,8 @@ yookassa>=2.3.0
 
 # CRM
 hubspot-api-client>=7.0.0
-
+# GitHub
+PyGithub==1.77
 # HTTP клиент (уже есть в requirements.txt)
 httpx>=0.27.0  # для прямых запросов к API без библиотек
 ```
