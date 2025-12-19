@@ -229,6 +229,23 @@ class WildberriesGetOrderIntegration(BaseIntegration):
                             "description": "Wildberries API authentication failed"
                         }
                     }
+
+                elif response.status_code == 403:
+                    # Forbidden - token lacks required permissions or is blocked
+                    try:
+                        err = response.json()
+                        err_msg = err.get("message") or err.get("error") or response.text
+                    except Exception:
+                        err_msg = response.text
+
+                    await logger.error(f"Wildberries API forbidden (403): {err_msg}")
+                    return {
+                        "response": {
+                            "ok": False,
+                            "error_code": 403,
+                            "description": f"Forbidden: {err_msg}"
+                        }
+                    }
                 
                 elif response.status_code == 404:
                     await logger.warning(f"Order {order_id} not found (404)")
