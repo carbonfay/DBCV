@@ -24,15 +24,9 @@ services:
         condition: service_healthy
       s3:
         condition: service_healthy
-    environment:
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_PUBLIC_ENDPOINT=${S3_PUBLIC_ENDPOINT}
-      - S3_REGION=${S3_REGION}
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
-      - S3_SECRET_KEY=${S3_SECRET_KEY}
-      - S3_BUCKET=${S3_BUCKET}
+
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8003/health" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -56,12 +50,12 @@ services:
     ports:
       - "8005:8005"
     restart: unless-stopped
-    command: ["python", "run_http_server.py"]
+    command: [ "python", "run_http_server.py" ]
     dns:
       - 8.8.8.8
       - 8.8.4.4
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8005/health" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -74,10 +68,7 @@ services:
       - my_network
     expose:
       - "5433"
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+
     command: -p 5433
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U dbcv_test -h 127.0.0.1 -p 5433" ]
@@ -93,7 +84,7 @@ services:
       - "6379"
     command: redis-server --maxmemory 2gb --maxmemory-policy noeviction
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -125,12 +116,6 @@ services:
       - env.dev
     environment:
       - ROLE=bot
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_PUBLIC_ENDPOINT=${S3_PUBLIC_ENDPOINT}
-      - S3_REGION=${S3_REGION}
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
-      - S3_SECRET_KEY=${S3_SECRET_KEY}
-      - S3_BUCKET=${S3_BUCKET}
       - AWS_EC2_METADATA_DISABLED=true
 
     depends_on:
@@ -143,7 +128,7 @@ services:
     command: faststream run faststream_app:app
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "pgrep", "python3"]
+      test: [ "CMD", "pgrep", "python3" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -156,12 +141,6 @@ services:
       - env.dev
     environment:
       - ROLE=user
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_PUBLIC_ENDPOINT=${S3_PUBLIC_ENDPOINT}
-      - S3_REGION=${S3_REGION}
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
-      - S3_SECRET_KEY=${S3_SECRET_KEY}
-      - S3_BUCKET=${S3_BUCKET}
       - AWS_EC2_METADATA_DISABLED=true
 
     depends_on:
@@ -175,7 +154,7 @@ services:
 
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "pgrep", "python3"]
+      test: [ "CMD", "pgrep", "python3" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -188,14 +167,6 @@ services:
     env_file:
       - env.dev
     environment:
-      - DB_POOL_SIZE=${DB_POOL_SIZE}
-      - DB_MAX_OVERFLOW=${DB_MAX_OVERFLOW}
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_PUBLIC_ENDPOINT=${S3_PUBLIC_ENDPOINT}
-      - S3_REGION=${S3_REGION}
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
-      - S3_SECRET_KEY=${S3_SECRET_KEY}
-      - S3_BUCKET=${S3_BUCKET}
       - AWS_EC2_METADATA_DISABLED=true
     depends_on:
       postgres:
@@ -208,7 +179,7 @@ services:
 
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "pgrep", "python3"]
+      test: [ "CMD", "pgrep", "python3" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -228,9 +199,8 @@ services:
     image: minio/minio:RELEASE.2024-09-22T00-33-43Z
     container_name: s3_dbcv
     command: server /data --console-address ":9002"
-    environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    env_file:
+      - env.dev
     ports:
       - "9000:9000"
       - "9002:9002"
@@ -239,7 +209,7 @@ services:
     networks:
       - my_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -253,18 +223,15 @@ services:
         condition: service_healthy
     networks:
       - my_network
+    env_file:
+      - env.dev
     entrypoint: >-
-      /bin/sh -c "
-      mc alias set local http://s3:9000   &&
-      mc mb -p local/dbcv-media || true &&
-      mc anonymous set download local/dbcv-media || true &&
-      exit 0
-      "
+      /bin/sh -c " mc alias set local http://s3:9000 \${MINIO_ROOT_USER} \${MINIO_ROOT_PASSWORD} && mc mb -p local/dbcv-media || true && mc anonymous set download local/dbcv-media || true && exit 0 "
     restart: on-failure:3
-
 
 networks:
   my_network:
+
 
 volumes:
   s3_data:
