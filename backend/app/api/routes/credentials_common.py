@@ -121,6 +121,17 @@ def _get_all_providers() -> List[ProviderInfo]:
             }
         ),
         ProviderInfo(
+            value="openweathermap",
+            label="OpenWeatherMap",
+            description="OpenWeatherMap Weather API",
+            supported_strategies=["api_key"],
+            payload_examples={
+                "api_key": {
+                    "api_key": "YOUR_OPENWEATHERMAP_API_KEY"
+                }
+            }
+        ),
+        ProviderInfo(
             value="other",
             label="Другое",
             description="Другой провайдер",

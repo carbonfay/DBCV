@@ -35,14 +35,14 @@ class OpenWeatherMapDailyForecastIntegration(BaseIntegration):
                 "required": ["latitude", "longitude"],
                 "properties": {
                     "latitude": {
-                        "type": "number",
+                        "type": "string",
                         "title": "Latitude",
-                        "description": "Широта местоположения (например, 55.7558 для Москвы)"
+                        "description": "Широта местоположения (например, 55.7558 или 55,7558 для Москвы). Запятая (,) будет автоматически заменена на точку (.)"
                     },
                     "longitude": {
-                        "type": "number",
+                        "type": "string",
                         "title": "Longitude",
-                        "description": "Долгота местоположения (например, 37.6173 для Москвы)"
+                        "description": "Долгота местоположения (например, 37.6173 или 37,6173 для Москвы). Запятая (,) будет автоматически заменена на точку (.)"
                     },
                     "units": {
                         "type": "string",
@@ -168,6 +168,12 @@ class OpenWeatherMapDailyForecastIntegration(BaseIntegration):
         
         # Валидация типов параметров и диапазонов
         try:
+            # Поддерживаем строковые значения с запятой, например "55,7558"
+            if isinstance(latitude, str):
+                latitude = latitude.strip().replace(',', '.')
+            if isinstance(longitude, str):
+                longitude = longitude.strip().replace(',', '.')
+
             latitude = float(latitude)
             longitude = float(longitude)
             
