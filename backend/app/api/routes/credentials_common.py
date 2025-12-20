@@ -121,6 +121,18 @@ def _get_all_providers() -> List[ProviderInfo]:
             }
         ),
         ProviderInfo(
+            value="yookassa",
+            label="YooKassa",
+            description="Платежная система ЮKassa",
+            supported_strategies=["api_key"],
+            payload_examples={
+                "api_key": {
+                    "account_id": "YOUR_SHOP_ID",
+                    "secret_key": "YOUR_SECRET_KEY"
+                }
+            }
+        ),
+        ProviderInfo(
             value="other",
             label="Другое",
             description="Другой провайдер",
