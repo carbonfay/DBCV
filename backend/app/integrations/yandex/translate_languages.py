@@ -59,7 +59,7 @@ class YandexTranslateLanguagesIntegration(BaseIntegration):
                 "additionalProperties": False
             },
             credentials_provider="yandex_cloud",
-            credentials_strategy="api_key",
+            credentials_strategy="service_account",
             library_name="httpx>=0.24.0",
             examples=[
                 {
