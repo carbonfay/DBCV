@@ -2,7 +2,7 @@ FROM python:3.12.7-alpine
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 RUN mkdir -p /backend
-RUN apk add --no-cache git
+RUN apk add --no-cache git curl
 # Проверяем версию git
 RUN git --version
 
