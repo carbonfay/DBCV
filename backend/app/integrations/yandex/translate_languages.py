@@ -41,7 +41,7 @@ class YandexTranslateLanguagesIntegration(BaseIntegration):
     def metadata(self) -> IntegrationMetadata:
         return IntegrationMetadata(
             id="yandex_translate_languages",
-            version="2.0.0",  # Обновили версию из-за смены API
+            version="1.0.0",
             name="Yandex Translate Languages",
             description="Получение списка поддерживаемых языков для перевода через Яндекс.Переводчик (API v2)",
             category="translation",
