@@ -3,6 +3,7 @@
 """
 from typing import Dict, Any, Optional
 from uuid import UUID
+from urllib.parse import quote_plus
 
 from app.integrations.base import BaseIntegration, IntegrationMetadata
 from app.auth.credentials_resolver import CredentialsResolver
@@ -44,6 +45,13 @@ class GitVerseCreateIssueIntegration(BaseIntegration):
                         "type": "string",
                         "title": "Repository",
                         "description": "Repository in format owner/repo"
+                    },
+                    "api_type": {
+                        "type": "string",
+                        "title": "API Type",
+                        "description": "Type of API: 'github' (default) or 'gitlab'",
+                        "enum": ["github", "gitlab"],
+                        "default": "github"
                     },
                     "title": {"type": "string", "title": "Issue Title"},
                     "body": {"type": "string", "title": "Issue Body"},
@@ -134,21 +142,64 @@ class GitVerseCreateIssueIntegration(BaseIntegration):
                 }
             }
 
-        # Формируем endpoint (GitHub-like)
-        endpoint = f"{api_url.rstrip('/')}/repos/{repo}/issues"
+        # Определяем тип API: github (default) или gitlab
+        api_type = (config.get("api_type") or "github").lower()
 
-        headers = {
-            "Accept": "application/vnd.github.v3+json",
-            "Authorization": f"Bearer {api_key}"
-        }
+        json_body: Dict[str, Any] = {}
+        headers: Dict[str, str] = {}
 
-        json_body = {"title": title}
-        if body:
-            json_body["body"] = body
-        if labels:
-            json_body["labels"] = labels
-        if assignees:
-            json_body["assignees"] = assignees
+        if api_type == "gitlab" or (api_url and "/api/v4" in api_url) or (api_url and "gitlab" in api_url):
+            # GitLab API expects POST /api/v4/projects/:id/issues
+            # project identifier can be numeric id or URL-encoded path (namespace%2Fproject)
+            project_id = config.get("project_id") or repo
+            if not project_id:
+                await logger.error("project_id (or repo) is required for GitLab API")
+                return {
+                    "response": {
+                        "ok": False,
+                        "error_code": 400,
+                        "description": "project_id (or repo) is required for GitLab API"
+                    }
+                }
+
+            endpoint = f"{api_url.rstrip('/')}/api/v4/projects/{quote_plus(str(project_id))}/issues"
+
+            # GitLab supports PRIVATE-TOKEN header or Authorization; include both to be safe
+            headers = {
+                "Accept": "application/json",
+                "Authorization": f"Bearer {api_key}",
+                "PRIVATE-TOKEN": api_key,
+            }
+
+            json_body["title"] = title
+            if body:
+                json_body["description"] = body
+            if labels:
+                # GitLab expects comma-separated labels string
+                if isinstance(labels, list):
+                    json_body["labels"] = ",".join(labels)
+                else:
+                    json_body["labels"] = labels
+            if assignees:
+                # GitLab uses assignee_ids (list of ints)
+                json_body["assignee_ids"] = assignees
+
+        else:
+            # Формируем endpoint (GitHub-like)
+            endpoint = f"{api_url.rstrip('/')}/repos/{repo}/issues"
+
+            headers = {
+                "Accept": "application/vnd.github.v3+json",
+                "Authorization": f"Bearer {api_key}"
+            }
+
+            json_body = {"title": title}
+            if body:
+                json_body["body"] = body
+            if labels:
+                json_body["labels"] = labels
+            if assignees:
+                json_body["assignees"] = assignees
 
         try:
             async with httpx.AsyncClient() as client:
