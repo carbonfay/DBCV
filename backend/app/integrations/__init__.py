@@ -8,3 +8,9 @@ except ImportError:
 
 # Внутренние интеграции DBCV
 from app.integrations.dbcv import *  # noqa: F401, F403
+
+try:
+    from app.integrations.medicine import *  # noqa: F401, F403
+except ImportError:
+    # Библиотека/модуль не установлен или отсутствует, пропускаем
+    pass
