@@ -94,3 +94,45 @@ async def test_execute_missing_config(integration, credentials_resolver, logger,
 
     assert result["response"]["ok"] is False
     assert result["response"]["error_code"] == 400
+
+
+@pytest.mark.asyncio
+async def test_execute_gitlab_success(integration, credentials_resolver, logger, bot_id):
+    # Ensure GitLab path and payload mapping work: project_id used, description instead of body, labels comma-separated
+    with patch('app.integrations.gitverse.create_issue.httpx.AsyncClient') as mock_client_cls:
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.json.return_value = {"iid": 42, "title": "GL Issue"}
+        mock_response.text = "created"
+
+        mock_client.post = AsyncMock(return_value=mock_response)
+        mock_client_cls.return_value.__aenter__.return_value = mock_client
+
+        result = await integration.execute(
+            config={
+                "api_url": "https://gitlab.example.com",
+                "repo": "group/project",
+                "project_id": "group/project",
+                "api_type": "gitlab",
+                "title": "GL Issue",
+                "body": "Details",
+                "labels": ["a", "b"],
+                "assignees": [123]
+            },
+            credentials_resolver=credentials_resolver,
+            bot_id=bot_id,
+            logger=logger
+        )
+
+        assert result["response"]["ok"] is True
+        mock_client.post.assert_called_once()
+        args, kwargs = mock_client.post.call_args
+        # endpoint contains /api/v4/projects/{id}/issues
+        assert "/api/v4/projects/" in args[0]
+        assert "issues" in args[0]
+        # payload mapping checks
+        assert kwargs["json"]["title"] == "GL Issue"
+        assert kwargs["json"]["description"] == "Details"
+        assert kwargs["json"]["labels"] == "a,b"
+        assert "assignee_ids" in kwargs["json"]
