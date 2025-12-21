@@ -121,11 +121,23 @@ def _get_all_providers() -> List[ProviderInfo]:
             }
         ),
         ProviderInfo(
+            value="stripe",
+            label="Stripe",
+            description="Stripe Payment API",
+            supported_strategies=["api_key"],
+            payload_examples={
+                "api_key": {
+                    "api_key": "sk_test_..."
+                }
+            }
+        ),
+        ProviderInfo(
             value="other",
             label="Другое",
             description="Другой провайдер",
             supported_strategies=["api_key", "oauth", "basic", "service_account"]
         ),
+
     ]
 
 
