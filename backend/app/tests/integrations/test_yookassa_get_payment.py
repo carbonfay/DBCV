@@ -86,6 +86,35 @@ async def test_execute_configures_with_keys_and_returns_payment(integration, log
 
 
 @pytest.mark.asyncio
+async def test_execute_with_fixture_detail(integration, logger, bot_id, creds_with_keys):
+    """Использование фикстуры JSON для проверки получения платежа по ID"""
+    creds_resolver = MagicMock(spec=CredentialsResolver)
+    creds_resolver.get_default_for = AsyncMock(return_value=creds_with_keys)
+
+    import json
+    from pathlib import Path
+
+    fixture_path = Path(__file__).parent.parent / "fixtures" / "youkassa" / "payment_detail.json"
+    data = json.loads(fixture_path.read_text())
+
+    class FakePaymentFromJson:
+        def __init__(self, payload):
+            self._payload = payload
+
+        def to_dict(self):
+            return self._payload
+
+    with patch("app.integrations.yookassa.get_payment.Configuration") as mock_conf:
+        with patch("app.integrations.yookassa.get_payment.Payment") as mock_payment:
+            mock_payment.find_one.return_value = FakePaymentFromJson(data)
+
+            result = await integration.execute({"payment_id": "pay_1"}, creds_resolver, bot_id, logger)
+
+            assert result["response"]["ok"] is True
+            assert result["response"]["result"]["status"] == "succeeded"
+
+
+@pytest.mark.asyncio
 async def test_execute_configures_with_oauth_token(integration, logger, bot_id, creds_with_oauth):
     creds_resolver = MagicMock(spec=CredentialsResolver)
     creds_resolver.get_default_for = AsyncMock(return_value=creds_with_oauth)

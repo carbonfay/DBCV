@@ -104,6 +104,43 @@ async def test_execute_configures_with_keys_and_returns_items(integration, logge
 
 
 @pytest.mark.asyncio
+async def test_execute_with_fixture_data(integration, logger, bot_id, creds_with_keys):
+    """Использование фикстуры JSON для проверки парсинга списка платежей"""
+    creds_resolver = MagicMock(spec=CredentialsResolver)
+    creds_resolver.get_default_for = AsyncMock(return_value=creds_with_keys)
+
+    import json
+    from pathlib import Path
+
+    fixture_path = Path(__file__).parent.parent / "fixtures" / "youkassa" / "payments_list.json"
+    data = json.loads(fixture_path.read_text())
+
+    class FakeItemFromJson:
+        def __init__(self, payload):
+            self._payload = payload
+
+        def to_dict(self):
+            return self._payload
+
+    class FakeResp:
+        def __init__(self, items, next_cursor):
+            self.items = [FakeItemFromJson(i) for i in items]
+            self.next_cursor = next_cursor
+
+    with patch("app.integrations.yookassa.get_payments.Configuration") as mock_conf:
+        with patch("app.integrations.yookassa.get_payments.Payment") as mock_payment:
+            mock_payment.list.return_value = FakeResp(data["items"], data.get("next_cursor"))
+
+            result = await integration.execute({"limit": 2}, creds_resolver, bot_id, logger)
+
+            assert result["response"]["ok"] is True
+            items = result["response"]["result"]["items"]
+            assert len(items) == 2
+            assert items[0]["id"] == "pay_1"
+            assert items[1]["payment_method"] == "bank_card"
+
+
+@pytest.mark.asyncio
 async def test_execute_configures_with_oauth_token(integration, logger, bot_id, creds_with_oauth):
     creds_resolver = MagicMock(spec=CredentialsResolver)
     creds_resolver.get_default_for = AsyncMock(return_value=creds_with_oauth)

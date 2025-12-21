@@ -83,6 +83,36 @@ async def test_execute_creates_receipt_and_returns_result(integration, logger, b
 
 
 @pytest.mark.asyncio
+async def test_execute_with_fixture_receipt(integration, logger, bot_id, creds_with_keys):
+    """Использование фикстуры JSON для проверки создания чека"""
+    creds_resolver = MagicMock(spec=CredentialsResolver)
+    creds_resolver.get_default_for = AsyncMock(return_value=creds_with_keys)
+
+    import json
+    from pathlib import Path
+
+    fixture_path = Path(__file__).parent.parent / "fixtures" / "youkassa" / "receipt_create.json"
+    data = json.loads(fixture_path.read_text())
+
+    class FakeReceiptFromJson:
+        def __init__(self, payload):
+            self._payload = payload
+
+        def to_dict(self):
+            return self._payload
+
+    with patch("app.integrations.yookassa.create_receipt.Configuration") as mock_conf:
+        with patch("app.integrations.yookassa.create_receipt.Receipt") as mock_receipt:
+            mock_receipt.create.return_value = FakeReceiptFromJson(data)
+
+            cfg = {"payment_id": "p1", "items": [{"description": "x"}]}
+            result = await integration.execute(cfg, creds_resolver, bot_id, logger)
+
+            assert result["response"]["ok"] is True
+            assert result["response"]["result"]["id"] == "rt-1"
+
+
+@pytest.mark.asyncio
 async def test_execute_configures_with_oauth(integration, logger, bot_id, creds_with_oauth):
     creds_resolver = MagicMock(spec=CredentialsResolver)
     creds_resolver.get_default_for = AsyncMock(return_value=creds_with_oauth)
