@@ -16,8 +16,8 @@ class Provider(str, Enum):
     telegram = "telegram"
     discord = "discord"
     openai = "openai"
+    newsapi = "newsapi"
     other = "other"
-
 
 class Strategy(str, Enum):
     service_account = "service_account"
