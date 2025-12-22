@@ -8,3 +8,4 @@ except ImportError:
 
 # Внутренние интеграции DBCV
 from app.integrations.dbcv import *  # noqa: F401, F403
+from app.integrations.bitrix24 import *  # noqa: F401, F403
