@@ -21,6 +21,17 @@
 - **Безопасность**: Регулярные обновления, хорошая документация
 - **Установка**: `pip install python-telegram-bot>=20.0`
 
+## 🛠️ Developer Tools
+
+### GitHub
+- **Библиотека**: `PyGithub`
+- **Версия**: `>=1.55`
+- **PyPI**: https://pypi.org/project/PyGithub/
+- **GitHub**: https://github.com/PyGithub/PyGithub
+- **Статус**: ✅ Популярная и поддерживаемая библиотека для работы с GitHub API
+- **Безопасность**: Активная разработка и сообщество
+- **Установка**: `pip install PyGithub>=1.55`
+
 ### Discord
 - **Библиотека**: `discord.py`
 - **Версия**: `>=2.3.0`
