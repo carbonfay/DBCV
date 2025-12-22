@@ -121,6 +121,17 @@ def _get_all_providers() -> List[ProviderInfo]:
             }
         ),
         ProviderInfo(
+            value="github",
+            label="GitHub",
+            description="GitHub API",
+            supported_strategies=["api_key"],
+            payload_examples={
+                "api_key": {
+                    "token": "YOUR_GITHUB_TOKEN_HERE"
+                }
+            }
+        ),
+        ProviderInfo(
             value="other",
             label="Другое",
             description="Другой провайдер",
