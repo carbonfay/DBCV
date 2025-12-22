@@ -46,13 +46,6 @@ class GitVerseCreateIssueIntegration(BaseIntegration):
                         "title": "Repository",
                         "description": "Repository in format owner/repo"
                     },
-                    "api_type": {
-                        "type": "string",
-                        "title": "API Type",
-                        "description": "Type of API: 'github' (default) or 'gitlab'",
-                        "enum": ["github", "gitlab"],
-                        "default": "github"
-                    },
                     "title": {"type": "string", "title": "Issue Title"},
                     "body": {"type": "string", "title": "Issue Body"},
                     "labels": {"type": "array", "items": {"type": "string"}},
@@ -66,8 +59,8 @@ class GitVerseCreateIssueIntegration(BaseIntegration):
                 {
                     "title": "Create simple issue",
                     "config": {
-                        "api_url": "https://api.github.com",
-                        "repo": "owner/repo",
+                        "api_url": "https://gitverse.ru/api",
+                        "repo": "namespace/repo",
                         "title": "Bug: something is broken",
                         "body": "Steps to reproduce..."
                     }
@@ -142,8 +135,9 @@ class GitVerseCreateIssueIntegration(BaseIntegration):
                 }
             }
 
-        # Определяем тип API: github (default) или gitlab
-        api_type = (config.get("api_type") or "github").lower()
+        # Эта интеграция предназначена для GitVerse (https://gitverse.ru/docs/).
+        # Конфигурация не содержит выбора типа API — интеграция рассчитана на GitVerse API.
+        api_type = "gitverse"
 
         json_body: Dict[str, Any] = {}
         headers: Dict[str, str] = {}
