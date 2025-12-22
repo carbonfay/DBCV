@@ -1,5 +1,5 @@
-"""Wildberries Get Order интеграция используя прямые HTTP запросы через httpx."""
-from typing import Dict, Any
+"""Wildberries Get Order интеграция для получения информации о конкретном заказе."""
+from typing import Dict, Any, Optional
 from uuid import UUID
 import httpx
 
@@ -9,11 +9,11 @@ from app.loggers.bot import BotLogger
 
 
 class WildberriesGetOrderIntegration(BaseIntegration):
-    """Интеграция для получения информации о заказе из Wildberries используя прямые HTTP запросы."""
+    """Интеграция для получения информации о конкретном заказе из Wildberries."""
     
     # Wildberries API endpoints
-    WILDBERRIES_API_BASE_URL = "https://api.wildberries.ru"
-    WILDBERRIES_ORDERS_ENDPOINT = "/api/v1/supplier/orders"
+    WILDBERRIES_API_BASE_URL = "https://marketplace-api.wildberries.ru/"
+    WILDBERRIES_ORDERS_ENDPOINT = "/api/v2/supplier/orders"
     
     @property
     def metadata(self) -> IntegrationMetadata:
@@ -31,23 +31,29 @@ class WildberriesGetOrderIntegration(BaseIntegration):
                 "properties": {
                     "order_id": {
                         "type": "string",
-                        "title": "Order ID",
-                        "description": "ID заказа в Wildberries (можно использовать переменные: {$order.id$})"
+                        "title": "ID заказа",
+                        "description": "ID заказа в Wildberries (может содержать переменные вроде {$order.id$})"
                     },
                     "detailed": {
                         "type": "boolean",
-                        "title": "Detailed Info",
-                        "default": False,
-                        "description": "Получить детальную информацию о заказе (товары, статусы и т.д.)"
+                        "title": "Детальная информация",
+                        "description": "Получить детальную информацию о заказе (товары, дополнительные поля)",
+                        "default": False
                     }
                 }
             },
             credentials_provider="wildberries",
             credentials_strategy="api_key",
-            library_name=None,  # Не используем отдельную библиотеку, используем httpx
+            library_name=None,
             examples=[
                 {
                     "title": "Получить информацию о заказе",
+                    "config": {
+                        "order_id": "12345678"
+                    }
+                },
+                {
+                    "title": "Получить детальную информацию о заказе",
                     "config": {
                         "order_id": "12345678",
                         "detailed": True
@@ -64,7 +70,7 @@ class WildberriesGetOrderIntegration(BaseIntegration):
         logger: BotLogger
     ) -> Dict[str, Any]:
         """
-        Выполняет интеграцию используя прямые HTTP запросы к Wildberries API.
+        Выполняет интеграцию для получения информации о конкретном заказе.
         
         Args:
             config: Параметры интеграции
@@ -75,17 +81,16 @@ class WildberriesGetOrderIntegration(BaseIntegration):
         Returns:
             Результат выполнения в формате системы
         """
-        # Получаем order_id и параметры из config
+        # Получаем параметры из config
         order_id = config.get("order_id")
         detailed = config.get("detailed", False)
         
         if not order_id:
-            await logger.error("order_id is required")
             return {
                 "response": {
                     "ok": False,
                     "error_code": 400,
-                    "description": "order_id is required parameter"
+                    "description": "order_id is required"
                 }
             }
         
@@ -106,14 +111,8 @@ class WildberriesGetOrderIntegration(BaseIntegration):
                 }
             }
         
-        # Credentials возвращаются с ключом "payload", который содержит расшифрованные данные
-        payload = creds.get("payload", {})
-        if not payload:
-            # Если payload нет, возможно данные в корне (для обратной совместимости)
-            payload = creds
-        
-        # Получаем API token - может быть под разными ключами
-        # Предпочитаем `api_key` как каноническое поле, но принимаем `api_token` и `token` как fallback.
+        # Получаем API token
+        payload = creds.get("payload", {}) or creds
         api_key = payload.get("api_key") or payload.get("api_token") or payload.get("token")
 
         if not api_key:
@@ -126,29 +125,26 @@ class WildberriesGetOrderIntegration(BaseIntegration):
                 }
             }
         
-        # ИСПОЛЬЗУЕМ HTTPX ДЛЯ ПРЯМЫХ HTTP ЗАПРОСОВ
         try:
             async with httpx.AsyncClient() as client:
-                # Получаем заказ из Wildberries API
-                # Wildberries API использует Authorization header с X-API-KEY
-                # Устанавливаем X-API-KEY как основной заголовок (Wildberries spec),
-                # оставляем Authorization для обратной совместимости.
+                # Настройка заголовков
                 headers = {
                     "X-API-KEY": api_key,
                     "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json"
                 }
                 
-                # Формируем URL для получения заказа
-                # API может быть для конкретного заказа или нужно фильтровать из списка
-                url = f"{self.WILDBERRIES_API_BASE_URL}{self.WILDBERRIES_ORDERS_ENDPOINT}"
-                
-                # Параметры для фильтрации
+                # Формируем параметры запроса для получения одного заказа
                 params = {
-                    "order_id": str(order_id)
+                    "take": 1  # Получаем только один заказ
                 }
                 
+                # Если нужна детальная информация
+                if detailed:
+                    params["detailed"] = "true"
+                
                 # Делаем GET запрос к Wildberries API
+                url = f"{self.WILDBERRIES_API_BASE_URL}{self.WILDBERRIES_ORDERS_ENDPOINT}"
                 response = await client.get(
                     url,
                     headers=headers,
@@ -156,67 +152,30 @@ class WildberriesGetOrderIntegration(BaseIntegration):
                     timeout=30.0
                 )
                 
-                # Обрабатываем различные коды ответа
+                # Обработка ответа
                 if response.status_code == 200:
                     data = response.json()
-                    
-                    # Wildberries API может вернуть список заказов, нужно найти нужный
                     orders = data.get("orders", [])
                     
-                    if not orders:
-                        await logger.warning(f"Order {order_id} not found in response")
-                        return {
-                            "response": {
-                                "ok": False,
-                                "error_code": 404,
-                                "description": f"Order {order_id} not found"
-                            }
-                        }
-                    
-                    # Обычно API вернет один заказ, но на случай нескольких - возьмем первый
-                    order = orders[0] if orders else None
+                    # Ищем заказ с нужным ID
+                    order = None
+                    for o in orders:
+                        if str(o.get("id")) == str(order_id) or str(o.get("number")) == str(order_id):
+                            order = o
+                            break
                     
                     if not order:
                         return {
                             "response": {
                                 "ok": False,
                                 "error_code": 404,
-                                "description": f"Order {order_id} not found"
+                                "description": f"Order with id {order_id} not found"
                             }
                         }
                     
-                    # Формируем результат
-                    if detailed:
-                        # Детальная информация
-                        result = {
-                            "order_id": order.get("id"),
-                            "number": order.get("number"),
-                            "date": order.get("date"),
-                            "status": order.get("status"),
-                            "status_id": order.get("status_id"),
-                            "status_description": order.get("status_description"),
-                            "total": order.get("total"),
-                            "convertedPrice": order.get("convertedPrice"),
-                            "currency_code": order.get("currency_code"),
-                            "items": order.get("items", []),
-                            "address": order.get("address"),
-                            "supplier_id": order.get("supplier_id"),
-                            "client_id": order.get("client_id"),
-                            "payment_type": order.get("payment_type"),
-                            "comments": order.get("comments")
-                        }
-                    else:
-                        # Краткая информация
-                        result = {
-                            "order_id": order.get("id"),
-                            "number": order.get("number"),
-                            "date": order.get("date"),
-                            "status": order.get("status"),
-                            "total": order.get("total"),
-                            "currency_code": order.get("currency_code")
-                        }
+                    # Форматируем результат
+                    result = self._format_order(order)
                     
-                    # Возвращаем результат в формате системы
                     return {
                         "response": {
                             "ok": True,
@@ -224,6 +183,7 @@ class WildberriesGetOrderIntegration(BaseIntegration):
                         }
                     }
                 
+                # Обработка ошибок
                 elif response.status_code == 401:
                     await logger.error("Wildberries API authentication failed (401)")
                     return {
@@ -233,31 +193,21 @@ class WildberriesGetOrderIntegration(BaseIntegration):
                             "description": "Wildberries API authentication failed"
                         }
                     }
-
+                
                 elif response.status_code == 403:
-                    # Forbidden - token lacks required permissions or is blocked
+                    error_msg = "Forbidden: Invalid API key or insufficient permissions"
                     try:
                         err = response.json()
-                        err_msg = err.get("message") or err.get("error") or response.text
+                        error_msg = err.get("message") or err.get("error") or error_msg
                     except Exception:
-                        err_msg = response.text
-
-                    await logger.error(f"Wildberries API forbidden (403): {err_msg}")
+                        pass
+                    
+                    await logger.error(f"Wildberries API forbidden (403): {error_msg}")
                     return {
                         "response": {
                             "ok": False,
                             "error_code": 403,
-                            "description": f"Forbidden: {err_msg}"
-                        }
-                    }
-                
-                elif response.status_code == 404:
-                    await logger.warning(f"Order {order_id} not found (404)")
-                    return {
-                        "response": {
-                            "ok": False,
-                            "error_code": 404,
-                            "description": f"Order {order_id} not found"
+                            "description": error_msg
                         }
                     }
                 
@@ -268,16 +218,6 @@ class WildberriesGetOrderIntegration(BaseIntegration):
                             "ok": False,
                             "error_code": 429,
                             "description": "Rate limit exceeded"
-                        }
-                    }
-                
-                elif response.status_code >= 500:
-                    await logger.error(f"Wildberries API server error ({response.status_code})")
-                    return {
-                        "response": {
-                            "ok": False,
-                            "error_code": response.status_code,
-                            "description": f"Wildberries API server error: {response.status_code}"
                         }
                     }
                 
@@ -327,3 +267,59 @@ class WildberriesGetOrderIntegration(BaseIntegration):
                     "description": f"Unexpected error: {str(e)}"
                 }
             }
+    
+    def _format_order(self, order: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Форматирует информацию о заказе для возвращения.
+        
+        Args:
+            order: Данные заказа от API
+            
+        Returns:
+            Отформатированная информация о заказе
+        """
+        formatted_order = {
+            "id": order.get("id"),
+            "number": order.get("number"),
+            "date": order.get("date"),
+            "status": order.get("status"),
+            "status_id": order.get("status_id"),
+            "status_description": order.get("status_description"),
+            "total": order.get("total"),
+            "currency_code": order.get("currency_code"),
+            "items": self._format_items(order.get("items", [])) if order.get("items") else [],
+            "items_count": len(order.get("items", [])) if order.get("items") else 0,
+            "user": order.get("user"),
+            "address": order.get("address"),
+            "warehouse_id": order.get("warehouse_id")
+        }
+        
+        return formatted_order
+    
+    def _format_items(self, items: list) -> list:
+        """
+        Форматирует список товаров в заказе.
+        
+        Args:
+            items: Список товаров
+            
+        Returns:
+            Отформатированный список товаров
+        """
+        formatted_items = []
+        for item in items:
+            formatted_item = {
+                "id": item.get("id"),
+                "vendorCode": item.get("vendorCode"),
+                "nmId": item.get("nmId"),
+                "skuId": item.get("skuId"),
+                "name": item.get("name"),
+                "quantity": item.get("quantity"),
+                "price": item.get("price"),
+                "total": item.get("total"),
+                "status": item.get("status"),
+                "warehouseId": item.get("warehouseId")
+            }
+            formatted_items.append(formatted_item)
+        
+        return formatted_items
