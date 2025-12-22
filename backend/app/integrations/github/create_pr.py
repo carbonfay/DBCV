@@ -1,6 +1,6 @@
-"""GitHub Create Issue интеграция используя httpx библиотеку.
+"""GitHub Create Pull Request интеграция используя httpx библиотеку.
 
-Документация API: https://docs.github.com/en/rest/issues/issues?apiVersion=2022-11-28#create-an-issue
+Документация API: https://docs.github.com/en/rest/pulls/pulls?apiVersion=2022-11-28#create-a-pull-request
 """
 from typing import Dict, Any, Optional
 from uuid import UUID
@@ -18,22 +18,22 @@ except Exception:  # pragma: no cover - import guard
     HTTPX_AVAILABLE = False
 
 
-class GitHubCreateIssueIntegration(BaseIntegration):
-    """Интеграция для создания Issue в репозитории GitHub"""
+class GitHubCreatePullRequestIntegration(BaseIntegration):
+    """Интеграция для создания Pull Request в репозитории GitHub"""
 
     @property
     def metadata(self) -> IntegrationMetadata:
         return IntegrationMetadata(
-            id="github_create_issue",
+            id="github_create_pr",
             version="1.0.0",
-            name="GitHub Create Issue",
-            description="Создать issue в репозитории GitHub",
+            name="GitHub Create Pull Request",
+            description="Создать pull request в репозитории GitHub",
             category="developer_tools",
             icon_s3_key="icons/integrations/github.svg",
             color="#24292e",
             config_schema={
                 "type": "object",
-                "required": ["owner", "repo", "title"],
+                "required": ["owner", "repo", "title", "head", "base"],
                 "properties": {
                     "owner": {
                         "type": "string",
@@ -48,49 +48,66 @@ class GitHubCreateIssueIntegration(BaseIntegration):
                     "title": {
                         "type": "string",
                         "title": "Title",
-                        "description": "Заголовок issue"
+                        "description": "Заголовок pull request"
+                    },
+                    "head": {
+                        "type": "string",
+                        "title": "Head",
+                        "description": "Имя ветки с вашими изменениями (например, feature-branch)"
+                    },
+                    "base": {
+                        "type": "string",
+                        "title": "Base",
+                        "description": "Целевая ветка для слияния (например, main)"
                     },
                     "body": {
                         "type": "string",
                         "title": "Body",
-                        "description": "Тело issue (описание)"
+                        "description": "Описание pull request"
                     },
-                    "assignees": {
-                        "type": "array",
-                        "items": {"type": "string"}
+                    "issue": {
+                        "type": "integer",
+                        "title": "Issue",
+                        "description": "Номер issue (опционально) для создания PR из issue"
                     },
-                    "labels": {
-                        "type": "array",
-                        "title": "Labels",
-                        "items": {"type": "string"}
+                    "draft": {
+                        "type": "string",
+                        "title": "Draft",
+                        "description": "Создать как draft pull request"
                     },
-                    
+                    "maintainer_can_modify": {
+                        "type": "string",
+                        "title": "Maintainer Can Modify",
+                        "description": "Разрешить мейнтейнерам репозитория вносить изменения"
+                    }
                 }
             },
             credentials_provider="github",
             credentials_strategy="api_key",
             library_name="httpx>=0.25.0" if HTTPX_AVAILABLE else None,
             examples=[
-            {
-                "title": "Create simple issue",
-                "config": {
-                "owner": "octocat",
-                "repo": "hello-world",
-                "title": "Issue from DBCV",
-                "body": "This issue was created by DBCV integration"
+                {
+                    "title": "Create simple pull request",
+                    "config": {
+                        "owner": "octocat",
+                        "repo": "hello-world",
+                        "head": "feature-branch",
+                        "base": "main",
+                        "title": "Add new feature",
+                        "body": "This PR introduces a new feature."
+                    }
+                },
+                {
+                    "title": "Create draft pull request",
+                    "config": {
+                        "owner": "octocat",
+                        "repo": "hello-world",
+                        "head": "wip-branch",
+                        "base": "develop",
+                        "title": "WIP: work in progress",
+                        "draft": True
+                    }
                 }
-            },
-            {
-                "title": "Create issue with labels and assignees",
-                "config": {
-                "owner": "octocat",
-                "repo": "hello-world",
-                "title": "Bug: Something broken",
-                "body": "Steps to reproduce...",
-                "labels": ["bug", "high-priority"],
-                "assignees": ["octocat"]
-                }
-            }
             ]
         )
 
@@ -101,9 +118,9 @@ class GitHubCreateIssueIntegration(BaseIntegration):
         bot_id: UUID,
         logger: BotLogger,
     ) -> Dict[str, Any]:
-        """Создает issue в указанном репозитории.
+        """Создает pull request в указанном репозитории.
 
-        Ожидает в `config`: `owner`, `repo`, `title` и опционально `body`, `labels`, `assignees`.
+        Ожидает в `config`: `owner`, `repo`, `head`, `base`, `title` и опционально `body`, `draft`, `maintainer_can_modify`.
 
         Credentials должны быть доступны через `credentials_resolver.get_default_for` и содержать
         в `payload` ключ с токеном: `token` или `access_token` или `personal_access_token`.
@@ -155,39 +172,60 @@ class GitHubCreateIssueIntegration(BaseIntegration):
 
         owner = config.get("owner")
         repo = config.get("repo")
+        head = config.get("head")
+        base = config.get("base")
         title = config.get("title")
+        issue = config.get("issue")
         body = config.get("body")
-        labels = config.get("labels")
-        assignees = config.get("assignees")
+        draft = config.get("draft")
+        maintainer_can_modify = config.get("maintainer_can_modify")
 
-        if not owner or not repo or not title:
-            await logger.error("owner, repo and title are required in config")
+        if not owner or not repo or not head or not base or not title:
+            await logger.error("owner, repo, head, base and title are required in config")
             return {
                 "response": {
                     "ok": False,
                     "error_code": 400,
-                    "description": "owner, repo and title are required in config"
+                    "description": "owner, repo, head, base and title are required in config"
                 }
             }
 
-        url = f"https://api.github.com/repos/{owner}/{repo}/issues"
+        url = f"https://api.github.com/repos/{owner}/{repo}/pulls"
 
-        payload_json: Dict[str, Any] = {"title": str(title)}
+        payload_json: Dict[str, Any] = {"title": str(title), "head": str(head), "base": str(base)}
         if body is not None:
             payload_json["body"] = str(body)
-        if labels is not None:
-            payload_json["labels"] = labels
-        if assignees is not None:
-            payload_json["assignees"] = assignees
-        
-        
+        if issue is not None:
+            try:
+                payload_json["issue"] = int(issue)
+            except Exception:
+                payload_json["issue"] = None
+        def _convert_to_bool_or_str(v: Any) -> Any:
+            if isinstance(v, bool):
+                return v
+            s = str(v).strip()
+            lower = s.lower()
+            if lower in ("true", "1", "yes", "y", "on"):
+                return True
+            if lower in ("false", "0", "no", "n", "off"):
+                return False
+            try:
+                return bool(int(s))
+            except Exception:
+                return s
+
+        if draft is not None:
+            payload_json["draft"] = _convert_to_bool_or_str(draft)
+        if maintainer_can_modify is not None:
+            payload_json["maintainer_can_modify"] = _convert_to_bool_or_str(maintainer_can_modify)
+
         headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/json"
         }
 
         try:
-            # Log headers and body to console for debugging
+            # Try to pretty-print payload for debugging
             try:
                 import json as _json
                 pretty_body = _json.dumps(payload_json, ensure_ascii=False)
@@ -197,7 +235,6 @@ class GitHubCreateIssueIntegration(BaseIntegration):
             async with httpx.AsyncClient(timeout=30.0) as client:
                 resp = await client.post(url, json=payload_json, headers=headers)
 
-            # Успешное создание возвращает 201 Created
             if 200 <= resp.status_code < 300:
                 try:
                     result_json = resp.json()
@@ -206,7 +243,6 @@ class GitHubCreateIssueIntegration(BaseIntegration):
 
                 return {"response": {"ok": True, "result": result_json}}
 
-            # Ошибки от GitHub
             await logger.error(f"GitHub API error: {resp.status_code} - {resp.text}")
             return {
                 "response": {
@@ -217,7 +253,7 @@ class GitHubCreateIssueIntegration(BaseIntegration):
             }
 
         except httpx.HTTPError as e:
-            await logger.error(f"HTTPX error while creating GitHub issue: {e}")
+            await logger.error(f"HTTPX error while creating GitHub pull request: {e}")
             return {
                 "response": {
                     "ok": False,
@@ -226,7 +262,7 @@ class GitHubCreateIssueIntegration(BaseIntegration):
                 }
             }
         except Exception as e:
-            await logger.error(f"Unexpected error while creating GitHub issue: {e}")
+            await logger.error(f"Unexpected error while creating GitHub pull request: {e}")
             return {
                 "response": {
                     "ok": False,
