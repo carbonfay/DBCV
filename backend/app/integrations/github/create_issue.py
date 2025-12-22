@@ -194,10 +194,6 @@ class GitHubCreateIssueIntegration(BaseIntegration):
             except Exception:
                 pretty_body = str(payload_json)
 
-            print(f"GitHub Create Issue - URL: {url}")
-            print("Headers:", headers)
-            print("Request body:", pretty_body)
-
             async with httpx.AsyncClient(timeout=30.0) as client:
                 resp = await client.post(url, json=payload_json, headers=headers)
 
