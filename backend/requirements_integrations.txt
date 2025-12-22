@@ -31,5 +31,6 @@ hubspot-api-client>=7.0.0
 # - Bitrix24, AmoCRM
 # - Wildberries, Ozon
 # - NewsAPI
+git+https://github.com/mattlisiv/newsapi-python.git@master#egg=newsapi-python
 # - PayPal (preferred)
 # - Medical reference APIs
