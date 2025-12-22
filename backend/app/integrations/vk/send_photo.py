@@ -27,7 +27,7 @@ class VkSendPhotoIntegration(BaseIntegration):
     def metadata(self) -> IntegrationMetadata:
         return IntegrationMetadata(
             id="vk_send_photo",
-            version="1.0.0",
+            version="1.0.1",
             name="VK Send Photo",
             description="Отправка фото в VK (сообщение) через vk-api",
             category="messaging",
