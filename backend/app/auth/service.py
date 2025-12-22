@@ -6,6 +6,7 @@ from app.auth.cache import TokenCache
 from app.auth.providers.google_provider import GoogleProvider
 from app.auth.providers.amocrm_provider import AmoCrmProvider
 from app.auth.providers.yandex_provider import YandexCloudProvider, YandexIdOAuthProvider
+from app.auth.providers.wildberries_provider import WildberriesProvider
 
 
 class AuthService:
@@ -17,6 +18,7 @@ class AuthService:
             "amocrm": AmoCrmProvider(),
             "yandex_cloud": YandexCloudProvider(),
             "yandex_id": YandexIdOAuthProvider(),
+            "wildberries": WildberriesProvider(),
         }
 
     async def apply(
