@@ -1,6 +1,4 @@
-﻿version: "3.8"
-
-services:
+﻿services:
   backend:
     container_name: backend_dbcv
     build:
@@ -29,6 +27,9 @@ services:
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_BUCKET=${S3_BUCKET}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
       interval: 30s
@@ -71,18 +72,19 @@ services:
     networks:
       - my_network
     expose:
-      - "5433"
+      - "5432"
+    env_file:
+      - env.prod
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
-    command: -p 5433
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U dbcv_test -h 127.0.0.1 -p 5433" ]
+      test: [ "CMD-SHELL", "pg_isready -U dbcv_user -d dbcv_database -h 127.0.0.1" ]
       interval: 5s
       timeout: 3s
-      retries: 5
-      start_period: 5s
+      retries: 10
+      start_period: 60s
 
   redis:
     image: redis:latest
