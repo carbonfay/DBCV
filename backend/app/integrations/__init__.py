@@ -6,5 +6,11 @@ except ImportError:
     # Библиотека не установлена, пропускаем
     pass
 
+try:
+    from app.integrations.github import *  # noqa: F401, F403
+except ImportError:
+    # PyGithub или интеграция не доступна, пропускаем
+    pass
+
 # Внутренние интеграции DBCV
 from app.integrations.dbcv import *  # noqa: F401, F403
