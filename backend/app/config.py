@@ -31,11 +31,11 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = os.getenv("DATABASE_URL", URL.create(
         "postgresql+asyncpg",
-        username="dbcv_test",
-        password="dbcv_test",
+        username="dbcv_user",
+        password="dbcv_password",
         host="postgres",
-        port=5433,
-        database="dbcv_test",
+        port=5432,
+        database="dbcv_database",
 
     ).render_as_string(hide_password=False))
     BASE_DIR: Path = Path(__file__).resolve().parent
