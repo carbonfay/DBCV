@@ -176,24 +176,40 @@ async def run():
     g.Payment = FakePaymentAPI({"items": [payment_detail]})
     cr.Receipt = FakeReceiptAPI(receipt_fixture)
 
+    results = []
+
     # Run Get Payments
-    print("\n--- Get Payments ---")
     gp_integration = YoukassaGetPaymentsIntegration()
-    res = await gp_integration.execute({"limit": 2}, resolver, bot_id, logger)
-    print(json.dumps(res, indent=2, ensure_ascii=False, default=str))
+    request_gp = {"limit": 2}
+    res_gp = await gp_integration.execute(request_gp, resolver, bot_id, logger)
+    results.append({"integration": gp_integration.metadata.id, "request": request_gp, "response": res_gp})
 
     # Run Get Payment
-    print("\n--- Get Payment ---")
     g_integration = YoukassaGetPaymentIntegration()
-    res = await g_integration.execute({"payment_id": "pay_1"}, resolver, bot_id, logger)
-    print(json.dumps(res, indent=2, ensure_ascii=False, default=str))
+    request_g = {"payment_id": "pay_1"}
+    res_g = await g_integration.execute(request_g, resolver, bot_id, logger)
+    results.append({"integration": g_integration.metadata.id, "request": request_g, "response": res_g})
 
     # Run Create Receipt
-    print("\n--- Create Receipt ---")
     cr_integration = YoukassaCreateReceiptIntegration()
-    cfg = {"payment_id": "pay_1", "items": [{"description": "x", "amount": {"value": "100.00", "currency": "RUB"}}]}
-    res = await cr_integration.execute(cfg, resolver, bot_id, logger)
-    print(json.dumps(res, indent=2, ensure_ascii=False, default=str))
+    request_cr = {"payment_id": "pay_1", "items": [{"description": "x", "amount": {"value": "100.00", "currency": "RUB"}}]}
+    res_cr = await cr_integration.execute(request_cr, resolver, bot_id, logger)
+    results.append({"integration": cr_integration.metadata.id, "request": request_cr, "response": res_cr})
+
+    # Print concise, copyable report
+    print("\n=== YooKassa Integration Test Report ===\n")
+    for r in results:
+        print(f"Integration: {r['integration']}")
+        print("Request:")
+        print(json.dumps(r['request'], ensure_ascii=False))
+        print("Response:")
+        print(json.dumps(r['response'], ensure_ascii=False, indent=2, default=str))
+        print("\n---\n")
+
+    # Save structured results to file for sharing
+    out_path = Path(__file__).parent / "youkassa_test_results.json"
+    out_path.write_text(json.dumps(results, ensure_ascii=False, indent=2, default=str))
+    print(f"Saved test results to: {out_path}")
 
 
 if __name__ == "__main__":

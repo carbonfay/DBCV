@@ -1,0 +1,87 @@
+[
+  {
+    "integration": "youkassa_get_payments",
+    "request": {
+      "limit": 2
+    },
+    "response": {
+      "response": {
+        "ok": true,
+        "result": {
+          "items": [
+            {
+              "id": "pay_1",
+              "amount": {
+                "value": "1000.00",
+                "currency": "RUB"
+              },
+              "status": "succeeded",
+              "payment_method": "yoo_money"
+            },
+            {
+              "id": "pay_2",
+              "amount": {
+                "value": "500.00",
+                "currency": "RUB"
+              },
+              "status": "canceled",
+              "payment_method": "bank_card"
+            }
+          ],
+          "next_cursor": null
+        }
+      }
+    }
+  },
+  {
+    "integration": "youkassa_get_payment",
+    "request": {
+      "payment_id": "pay_1"
+    },
+    "response": {
+      "response": {
+        "ok": true,
+        "result": {
+          "items": [
+            {
+              "id": "pay_1",
+              "status": "succeeded",
+              "amount": {
+                "value": "1000.00",
+                "currency": "RUB"
+              },
+              "payment_method": "yoo_money",
+              "created_at": "2025-12-20T12:34:56.000Z"
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "integration": "youkassa_create_receipt",
+    "request": {
+      "payment_id": "pay_1",
+      "items": [
+        {
+          "description": "x",
+          "amount": {
+            "value": "100.00",
+            "currency": "RUB"
+          }
+        }
+      ]
+    },
+    "response": {
+      "response": {
+        "ok": true,
+        "result": {
+          "id": "rt-1",
+          "status": "created",
+          "payment_id": "pay_1",
+          "send": true
+        }
+      }
+    }
+  }
+]
