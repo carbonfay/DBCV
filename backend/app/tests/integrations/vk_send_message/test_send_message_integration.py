@@ -71,7 +71,7 @@ async def test_vk_execute_success(integration, credentials_resolver, logger, bot
 
         result = await integration.execute(
             config={
-                "peer_id": "123",
+                "user_id": 123,
                 "message": "Test message",
                 "random_id": 42
             },
@@ -82,7 +82,7 @@ async def test_vk_execute_success(integration, credentials_resolver, logger, bot
 
         assert result["response"]["ok"] is True
         assert result["response"]["result"]["message_id"] == 321
-        assert result["response"]["result"]["peer_id"] == 123
+        assert result["response"]["result"]["user_id"] == 123
         assert result["response"]["result"]["random_id"] == 42
 
         mock_httpx.AsyncClient.assert_called_once_with(timeout=VK_HTTP_TIMEOUT)
@@ -90,6 +90,7 @@ async def test_vk_execute_success(integration, credentials_resolver, logger, bot
         args, kwargs = mock_client.post.call_args
         assert args[0] == VK_API_URL
         assert kwargs["data"]["access_token"] == "vk-test-token"
+        assert kwargs["data"]["user_id"] == 123
         assert kwargs["data"]["v"] == VK_API_VERSION
 
 
@@ -101,7 +102,7 @@ async def test_vk_execute_no_credentials(integration, logger, bot_id):
 
     with patch("app.integrations.vk.send_message.HTTPX_AVAILABLE", True):
         result = await integration.execute(
-            config={"peer_id": "123", "message": "Test"},
+            config={"user_id": 123, "message": "Test", "random_id": 1},
             credentials_resolver=credentials_resolver,
             bot_id=bot_id,
             logger=logger
