@@ -2,7 +2,6 @@
 from typing import Dict, Any
 from uuid import UUID
 import json
-import random
 
 from app.integrations.base import BaseIntegration, IntegrationMetadata
 from app.auth.credentials_resolver import CredentialsResolver
@@ -10,8 +9,6 @@ from app.loggers.bot import BotLogger
 
 # Константы для настройки токена и версии API.
 VK_DEFAULT_API_VERSION = "5.131"
-VK_RANDOM_ID_MIN = 1
-VK_RANDOM_ID_MAX = 2**31 - 1
 VK_API_VERSION = VK_DEFAULT_API_VERSION
 VK_TOKEN_KEYS = ("access_token", "token", "api_key", "vk_token")
 VK_API_URL = "https://api.vk.com/method/messages.send"
@@ -40,12 +37,12 @@ def _normalize_comma_list(value: Any) -> str | None:
     return str(value)
 
 
-def _prepare_keyboard(keyboard: Any) -> str:
-    if keyboard is None:
+def _prepare_json_field(value: Any) -> str:
+    if value is None:
         return ""
-    if isinstance(keyboard, str):
-        return keyboard
-    return json.dumps(keyboard, ensure_ascii=False)
+    if isinstance(value, str):
+        return value
+    return json.dumps(value, ensure_ascii=False)
 
 
 class VkSendMessageIntegration(BaseIntegration):
@@ -63,22 +60,67 @@ class VkSendMessageIntegration(BaseIntegration):
             color="#4C75A3",
             config_schema={
                 "type": "object",
-                "required": ["peer_id", "message"],
+                "required": ["random_id"],
+                "anyOf": [
+                    {"required": ["user_id"]},
+                    {"required": ["peer_id"]},
+                    {"required": ["peer_ids"]},
+                    {"required": ["domain"]},
+                    {"required": ["chat_id"]},
+                    {"required": ["user_ids"]},
+                ],
                 "properties": {
+                    "user_id": {
+                        "type": "integer",
+                        "title": "User ID",
+                        "description": "ID пользователя, которому отправляется сообщение"
+                    },
                     "peer_id": {
-                        "type": "string",
+                        "type": "integer",
                         "title": "Peer ID",
-                        "description": "ID пользователя/чата VK (можно использовать переменные: {$user.vk_id$})"
+                        "description": "ID получателя: пользователь, беседа (2000000000+ID), сообщество (-ID)"
+                    },
+                    "peer_ids": {
+                        "type": ["string", "array"],
+                        "title": "Peer IDs",
+                        "items": {"type": "integer"},
+                        "description": "ID получателей через запятую или массив (до 100)"
+                    },
+                    "domain": {
+                        "type": "string",
+                        "title": "Domain",
+                        "description": "Короткий адрес пользователя"
+                    },
+                    "chat_id": {
+                        "type": "integer",
+                        "title": "Chat ID",
+                        "description": "ID беседы"
+                    },
+                    "user_ids": {
+                        "type": ["string", "array"],
+                        "title": "User IDs",
+                        "items": {"type": "integer"},
+                        "description": "ID получателей через запятую или массив (до 100)"
                     },
                     "message": {
                         "type": "string",
                         "title": "Message",
-                        "description": "Текст сообщения"
+                        "description": "Текст сообщения (обязателен, если нет attachment)"
                     },
                     "random_id": {
                         "type": "integer",
                         "title": "Random ID",
-                        "description": "Идентификатор сообщения (если не указан, будет сгенерирован автоматически)"
+                        "description": "Идентификатор сообщения (0 отключает проверку уникальности)"
+                    },
+                    "lat": {
+                        "type": "string",
+                        "title": "Latitude",
+                        "description": "Географическая широта (-90..90)"
+                    },
+                    "long": {
+                        "type": "string",
+                        "title": "Longitude",
+                        "description": "Географическая долгота (-180..180)"
                     },
                     "attachment": {
                         "type": ["string", "array"],
@@ -86,9 +128,62 @@ class VkSendMessageIntegration(BaseIntegration):
                         "items": {"type": "string"},
                         "description": "Вложения VK (строка через запятую или массив)"
                     },
+                    "reply_to": {
+                        "type": "integer",
+                        "title": "Reply To",
+                        "description": "ID сообщения, на которое нужно ответить"
+                    },
+                    "forward_messages": {
+                        "type": ["string", "array", "integer"],
+                        "title": "Forward Messages",
+                        "items": {"type": "integer"},
+                        "description": "ID пересылаемых сообщений (через запятую или массив)"
+                    },
+                    "forward": {
+                        "title": "Forward",
+                        "description": "JSON-объект для пересылки сообщений",
+                        "oneOf": [
+                            {"type": "object"},
+                            {"type": "string"}
+                        ]
+                    },
+                    "sticker_id": {
+                        "type": "integer",
+                        "title": "Sticker ID",
+                        "description": "ID стикера"
+                    },
+                    "group_id": {
+                        "type": "integer",
+                        "title": "Group ID",
+                        "description": "ID сообщества (для сообщений сообщества с ключом пользователя)"
+                    },
                     "keyboard": {
                         "title": "Keyboard",
                         "description": "Клавиатура VK (object или JSON string)",
+                        "oneOf": [
+                            {"type": "object"},
+                            {"type": "string"}
+                        ]
+                    },
+                    "template": {
+                        "title": "Template",
+                        "description": "Шаблон сообщения (object или JSON string)",
+                        "oneOf": [
+                            {"type": "object"},
+                            {"type": "string"}
+                        ]
+                    },
+                    "payload": {
+                        "title": "Payload",
+                        "description": "Полезные данные (object или JSON string)",
+                        "oneOf": [
+                            {"type": "object"},
+                            {"type": "string"}
+                        ]
+                    },
+                    "content_source": {
+                        "title": "Content Source",
+                        "description": "Источник контента для чат-ботов (object или JSON string)",
                         "oneOf": [
                             {"type": "object"},
                             {"type": "string"}
@@ -104,16 +199,15 @@ class VkSendMessageIntegration(BaseIntegration):
                         "title": "Disable Mentions",
                         "description": "Отключить упоминания"
                     },
-                    "reply_to": {
-                        "type": "integer",
-                        "title": "Reply To",
-                        "description": "ID сообщения, на которое нужно ответить"
+                    "intent": {
+                        "type": "string",
+                        "title": "Intent",
+                        "description": "Интент для сообщения"
                     },
-                    "forward_messages": {
-                        "type": ["string", "array", "integer"],
-                        "title": "Forward Messages",
-                        "items": {"type": "integer"},
-                        "description": "ID пересылаемых сообщений (через запятую или массив)"
+                    "subscribe_id": {
+                        "type": "integer",
+                        "title": "Subscribe ID",
+                        "description": "ID для работы с интентами"
                     }
                 }
             },
@@ -124,14 +218,15 @@ class VkSendMessageIntegration(BaseIntegration):
                 {
                     "title": "Простое сообщение",
                     "config": {
-                        "peer_id": "{$user.vk_id$}",
-                        "message": "Привет из DBCV!"
+                        "user_id": 123456,
+                        "message": "Привет из DBCV!",
+                        "random_id": 1
                     }
                 },
                 {
                     "title": "Сообщение с параметрами",
                     "config": {
-                        "peer_id": "2000000001",
+                        "peer_id": 2000000001,
                         "message": "Сообщение в беседу",
                         "random_id": 12345,
                         "dont_parse_links": True,
@@ -206,66 +301,119 @@ class VkSendMessageIntegration(BaseIntegration):
                 }
             }
 
+        user_id = config.get("user_id")
         peer_id = config.get("peer_id")
+        peer_ids = config.get("peer_ids")
+        domain = config.get("domain")
+        chat_id = config.get("chat_id")
+        user_ids = config.get("user_ids")
         message = config.get("message")
-        if peer_id in (None, "") or message in (None, ""):
-            await logger.error("peer_id and message are required")
+
+        has_recipient = any(
+            value not in (None, "")
+            for value in (user_id, peer_id, peer_ids, domain, chat_id, user_ids)
+        )
+        if not has_recipient:
+            await logger.error("user_id or peer_id or peer_ids or domain or chat_id or user_ids is required")
             return {
                 "response": {
                     "ok": False,
                     "error_code": 400,
-                    "description": "peer_id and message are required"
+                    "description": "recipient field is required"
                 }
             }
 
         random_id = config.get("random_id")
-        if random_id is None:
-            random_id = random.randint(VK_RANDOM_ID_MIN, VK_RANDOM_ID_MAX)
-        else:
-            try:
-                random_id = int(random_id)
-            except (TypeError, ValueError):
-                await logger.error("random_id must be an integer")
-                return {
-                    "response": {
-                        "ok": False,
-                        "error_code": 400,
-                        "description": "random_id must be an integer"
-                    }
+        if random_id in (None, ""):
+            await logger.error("random_id is required")
+            return {
+                "response": {
+                    "ok": False,
+                    "error_code": 400,
+                    "description": "random_id is required"
                 }
-
+            }
         try:
-            peer_id_value = int(peer_id)
+            random_id = int(random_id)
         except (TypeError, ValueError):
-            peer_id_value = peer_id
+            await logger.error("random_id must be an integer")
+            return {
+                "response": {
+                    "ok": False,
+                    "error_code": 400,
+                    "description": "random_id must be an integer"
+                }
+            }
 
         params: Dict[str, Any] = {
-            "peer_id": peer_id_value,
-            "message": str(message),
             "random_id": random_id,
             "access_token": access_token,
             "v": VK_API_VERSION,
         }
 
-        attachment = _normalize_comma_list(config.get("attachment"))
-        if attachment:
-            params["attachment"] = attachment
-
-        keyboard_config = config.get("keyboard")
-        if keyboard_config is not None:
+        if user_id not in (None, ""):
             try:
-                keyboard_payload = _prepare_keyboard(keyboard_config)
-            except (TypeError, ValueError) as exc:
-                await logger.error(f"Invalid keyboard payload: {exc}")
+                params["user_id"] = int(user_id)
+            except (TypeError, ValueError):
+                await logger.error("user_id must be an integer")
                 return {
                     "response": {
                         "ok": False,
                         "error_code": 400,
-                        "description": "keyboard must be an object or valid JSON string"
+                        "description": "user_id must be an integer"
                     }
                 }
-            if keyboard_payload:
-                params["keyboard"] = keyboard_payload
+
+        if peer_id not in (None, ""):
+            try:
+                params["peer_id"] = int(peer_id)
+            except (TypeError, ValueError):
+                await logger.error("peer_id must be an integer")
+                return {
+                    "response": {
+                        "ok": False,
+                        "error_code": 400,
+                        "description": "peer_id must be an integer"
+                    }
+                }
+
+        if peer_ids not in (None, ""):
+            params["peer_ids"] = _normalize_comma_list(peer_ids)
+
+        if domain not in (None, ""):
+            params["domain"] = str(domain)
+
+        if chat_id not in (None, ""):
+            try:
+                params["chat_id"] = int(chat_id)
+            except (TypeError, ValueError):
+                await logger.error("chat_id must be an integer")
+                return {
+                    "response": {
+                        "ok": False,
+                        "error_code": 400,
+                        "description": "chat_id must be an integer"
+                    }
+                }
+
+        if user_ids not in (None, ""):
+            params["user_ids"] = _normalize_comma_list(user_ids)
+
+        attachment = _normalize_comma_list(config.get("attachment"))
+        if attachment:
+            params["attachment"] = attachment
+
+        if message not in (None, ""):
+            params["message"] = str(message)
+        elif not attachment:
+            await logger.error("message or attachment is required")
+            return {
+                "response": {
+                    "ok": False,
+                    "error_code": 400,
+                    "description": "message or attachment is required"
+                }
+            }
 
         dont_parse_links = _coerce_vk_bool(config.get("dont_parse_links"))
         if dont_parse_links is not None:
@@ -292,6 +440,85 @@ class VkSendMessageIntegration(BaseIntegration):
         forward_messages = _normalize_comma_list(config.get("forward_messages"))
         if forward_messages:
             params["forward_messages"] = forward_messages
+
+        sticker_id = config.get("sticker_id")
+        if sticker_id not in (None, ""):
+            try:
+                params["sticker_id"] = int(sticker_id)
+            except (TypeError, ValueError):
+                await logger.error("sticker_id must be an integer")
+                return {
+                    "response": {
+                        "ok": False,
+                        "error_code": 400,
+                        "description": "sticker_id must be an integer"
+                    }
+                }
+
+        group_id = config.get("group_id")
+        if group_id not in (None, ""):
+            try:
+                params["group_id"] = int(group_id)
+            except (TypeError, ValueError):
+                await logger.error("group_id must be an integer")
+                return {
+                    "response": {
+                        "ok": False,
+                        "error_code": 400,
+                        "description": "group_id must be an integer"
+                    }
+                }
+
+        subscribe_id = config.get("subscribe_id")
+        if subscribe_id not in (None, ""):
+            try:
+                params["subscribe_id"] = int(subscribe_id)
+            except (TypeError, ValueError):
+                await logger.error("subscribe_id must be an integer")
+                return {
+                    "response": {
+                        "ok": False,
+                        "error_code": 400,
+                        "description": "subscribe_id must be an integer"
+                    }
+                }
+
+        lat_value = config.get("lat")
+        if lat_value not in (None, ""):
+            params["lat"] = str(lat_value)
+
+        long_value = config.get("long")
+        if long_value not in (None, ""):
+            params["long"] = str(long_value)
+
+        intent_value = config.get("intent")
+        if intent_value not in (None, ""):
+            params["intent"] = str(intent_value)
+
+        json_fields = {
+            "keyboard": config.get("keyboard"),
+            "template": config.get("template"),
+            "payload": config.get("payload"),
+            "content_source": config.get("content_source"),
+            "forward": config.get("forward"),
+        }
+
+        for field_name, field_value in json_fields.items():
+            if field_value is None:
+                continue
+            try:
+                field_payload = _prepare_json_field(field_value)
+            except (TypeError, ValueError) as exc:
+                await logger.error(f"Invalid {field_name} payload: {exc}")
+                return {
+                    "response": {
+                        "ok": False,
+                        "error_code": 400,
+                        "description": f"{field_name} must be an object or valid JSON string"
+                    }
+                }
+            if field_payload:
+                params[field_name] = field_payload
 
         try:
             async with httpx.AsyncClient(timeout=VK_HTTP_TIMEOUT) as client:
@@ -339,14 +566,18 @@ class VkSendMessageIntegration(BaseIntegration):
                     }
                 }
 
+            result_payload = {
+                "message_id": message_id,
+                "random_id": random_id,
+            }
+            for key in ("peer_id", "user_id", "peer_ids", "user_ids", "chat_id", "domain"):
+                if key in params:
+                    result_payload[key] = params[key]
+
             return {
                 "response": {
                     "ok": True,
-                    "result": {
-                        "message_id": message_id,
-                        "peer_id": peer_id_value,
-                        "random_id": random_id
-                    }
+                    "result": result_payload
                 }
             }
         except httpx.HTTPStatusError as exc:
