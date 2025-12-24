@@ -54,7 +54,7 @@ class GitHubGetCommitsIntegration(BaseIntegration):
                     }
                 }
             },
-            credentials_provider="github",
+            credentials_provider="other",
             credentials_strategy="api_key",
             library_name="PyGithub>=1.55" if PYGITHUB_AVAILABLE else None,
             examples=[
@@ -133,7 +133,7 @@ class GitHubGetCommitsIntegration(BaseIntegration):
         # Получаем credentials
         creds = await credentials_resolver.get_default_for(
             bot_id=bot_id,
-            provider="github",
+            provider="other",
             strategy="api_key"
         )
 
@@ -153,7 +153,13 @@ class GitHubGetCommitsIntegration(BaseIntegration):
 
         token = None
         if isinstance(payload, dict):
-            token = payload.get("access_token") or payload.get("token") or payload.get("pat")
+            # Добавляем api_key в начало, так как это основное поле для этой стратегии
+            token = (
+                payload.get("api_key") or 
+                payload.get("access_token") or 
+                payload.get("token") or 
+                payload.get("pat")
+            )
         if not token and isinstance(creds, str):
             token = creds
 
