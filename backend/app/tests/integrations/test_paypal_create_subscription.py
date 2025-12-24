@@ -9,6 +9,25 @@ from app.loggers.bot import BotLogger
 import app.integrations.paypal.create_subscription as paypal_module
 
 
+class DummyResponse:
+    def __init__(self, status_code, json_data=None, text=""):
+        self.status_code = status_code
+        self._json_data = json_data
+        self.text = text
+
+    def json(self):
+        return self._json_data
+
+
+def _make_async_client(post_side_effect):
+    mock_client = AsyncMock()
+    mock_client.post = AsyncMock(side_effect=post_side_effect)
+    mock_cm = AsyncMock()
+    mock_cm.__aenter__.return_value = mock_client
+    mock_cm.__aexit__.return_value = AsyncMock(return_value=None)
+    return mock_cm, mock_client
+
+
 @pytest.fixture
 def integration():
     return PaypalCreateSubscriptionIntegration()
@@ -44,26 +63,16 @@ async def test_paypal_create_subscription_success(
     logger,
     bot_id
 ):
-    with patch.object(paypal_module, "PAYPAL_SDK_AVAILABLE", True), \
-         patch.object(paypal_module, "paypalrestsdk") as mock_sdk, \
-         patch.object(paypal_module, "BillingSubscription") as mock_subscription_class:
-        mock_api = MagicMock()
-        mock_sdk.Api.return_value = mock_api
+    token_response = DummyResponse(200, {"access_token": "token"})
+    subscription_response = DummyResponse(201, {"id": "I-123", "status": "ACTIVE"})
+    mock_cm, mock_client = _make_async_client([token_response, subscription_response])
 
-        mock_subscription = MagicMock()
-        mock_subscription.create.return_value = True
-        mock_subscription.to_dict.return_value = {
-            "id": "I-123",
-            "status": "ACTIVE"
-        }
-        mock_subscription_class.return_value = mock_subscription
-
+    with patch.object(paypal_module, "HTTPX_AVAILABLE", True), \
+         patch.object(paypal_module.httpx, "AsyncClient", return_value=mock_cm):
         result = await integration.execute(
             config={
                 "plan_id": "P-123",
-                "subscriber": {
-                    "email_address": "customer@example.com"
-                },
+                "subscriber": {"email_address": "customer@example.com"},
                 "application_context": {
                     "return_url": "https://example.com/success",
                     "cancel_url": "https://example.com/cancel"
@@ -74,43 +83,25 @@ async def test_paypal_create_subscription_success(
             logger=logger
         )
 
-        assert result["response"]["ok"] is True
-        assert result["response"]["result"]["id"] == "I-123"
+    assert result["response"]["ok"] is True
+    assert result["response"]["result"]["id"] == "I-123"
 
-        call_args = mock_subscription_class.call_args
-        payload = call_args.args[0]
-        assert payload["plan_id"] == "P-123"
-        assert payload["subscriber"]["email_address"] == "customer@example.com"
-        assert call_args.kwargs["api"] == mock_api
-
-        mock_sdk.Api.assert_called_once()
+    token_call = mock_client.post.call_args_list[0]
+    assert token_call.args[0] == f"{paypal_module.PAYPAL_SANDBOX_API_BASE}/v1/oauth2/token"
+    subscription_call = mock_client.post.call_args_list[1]
+    assert subscription_call.args[0] == f"{paypal_module.PAYPAL_SANDBOX_API_BASE}/v1/billing/subscriptions"
 
 
 @pytest.mark.asyncio
-async def test_paypal_create_subscription_env_fallback(
+async def test_paypal_create_subscription_no_credentials(
     integration,
     logger,
-    bot_id,
-    monkeypatch
+    bot_id
 ):
     resolver = MagicMock(spec=CredentialsResolver)
     resolver.get_default_for = AsyncMock(return_value=None)
 
-    monkeypatch.setattr(paypal_module, "PAYPAL_CLIENT_ID", "env-client-id")
-    monkeypatch.setattr(paypal_module, "PAYPAL_CLIENT_SECRET", "env-client-secret")
-    monkeypatch.setattr(paypal_module, "PAYPAL_MODE", "sandbox")
-
-    with patch.object(paypal_module, "PAYPAL_SDK_AVAILABLE", True), \
-         patch.object(paypal_module, "paypalrestsdk") as mock_sdk, \
-         patch.object(paypal_module, "BillingSubscription") as mock_subscription_class:
-        mock_api = MagicMock()
-        mock_sdk.Api.return_value = mock_api
-
-        mock_subscription = MagicMock()
-        mock_subscription.create.return_value = True
-        mock_subscription.to_dict.return_value = {"id": "I-456"}
-        mock_subscription_class.return_value = mock_subscription
-
+    with patch.object(paypal_module, "HTTPX_AVAILABLE", True):
         result = await integration.execute(
             config={"plan_id": "P-456"},
             credentials_resolver=resolver,
@@ -118,10 +109,57 @@ async def test_paypal_create_subscription_env_fallback(
             logger=logger
         )
 
-        assert result["response"]["ok"] is True
-        api_config = mock_sdk.Api.call_args.args[0]
-        assert api_config["client_id"] == "env-client-id"
-        assert api_config["client_secret"] == "env-client-secret"
+    assert result["response"]["ok"] is False
+    assert result["response"]["error"]["type"] == "credentials_missing"
+
+
+@pytest.mark.asyncio
+async def test_paypal_create_subscription_incomplete_credentials(
+    integration,
+    logger,
+    bot_id
+):
+    resolver = MagicMock(spec=CredentialsResolver)
+    resolver.get_default_for = AsyncMock(return_value={
+        "payload": {
+            "client_id": "client-id"
+        }
+    })
+
+    with patch.object(paypal_module, "HTTPX_AVAILABLE", True):
+        result = await integration.execute(
+            config={"plan_id": "P-457"},
+            credentials_resolver=resolver,
+            bot_id=bot_id,
+            logger=logger
+        )
+
+    assert result["response"]["ok"] is False
+    assert result["response"]["error"]["type"] == "credentials_missing"
+
+
+@pytest.mark.asyncio
+async def test_paypal_create_subscription_token_auth_error(
+    integration,
+    credentials_resolver,
+    logger,
+    bot_id
+):
+    token_response = DummyResponse(401, {"error": "invalid_client"})
+    mock_cm, _ = _make_async_client([token_response])
+
+    with patch.object(paypal_module, "HTTPX_AVAILABLE", True), \
+         patch.object(paypal_module.httpx, "AsyncClient", return_value=mock_cm):
+        result = await integration.execute(
+            config={"plan_id": "P-789"},
+            credentials_resolver=credentials_resolver,
+            bot_id=bot_id,
+            logger=logger
+        )
+
+    assert result["response"]["ok"] is False
+    assert result["response"]["error"]["type"] == "auth_error"
+    assert result["response"]["error"]["status_code"] == 401
 
 
 @pytest.mark.asyncio
@@ -131,57 +169,46 @@ async def test_paypal_create_subscription_api_error(
     logger,
     bot_id
 ):
-    with patch.object(paypal_module, "PAYPAL_SDK_AVAILABLE", True), \
-         patch.object(paypal_module, "paypalrestsdk") as mock_sdk, \
-         patch.object(paypal_module, "BillingSubscription") as mock_subscription_class:
-        mock_sdk.Api.return_value = MagicMock()
+    token_response = DummyResponse(200, {"access_token": "token"})
+    subscription_response = DummyResponse(422, {"name": "INVALID_REQUEST"})
+    mock_cm, _ = _make_async_client([token_response, subscription_response])
 
-        mock_subscription = MagicMock()
-        mock_subscription.create.return_value = False
-        mock_subscription.error = {
-            "name": "INVALID_REQUEST",
-            "message": "Bad request"
-        }
-        mock_subscription_class.return_value = mock_subscription
-
+    with patch.object(paypal_module, "HTTPX_AVAILABLE", True), \
+         patch.object(paypal_module.httpx, "AsyncClient", return_value=mock_cm):
         result = await integration.execute(
-            config={"plan_id": "P-789"},
+            config={"plan_id": "P-900"},
             credentials_resolver=credentials_resolver,
             bot_id=bot_id,
             logger=logger
         )
 
-        assert result["response"]["ok"] is False
-        assert result["response"]["error"]["type"] == "api_error"
-        assert "details" in result["response"]["error"]
+    assert result["response"]["ok"] is False
+    assert result["response"]["error"]["type"] == "api_error"
+    assert result["response"]["error"]["status_code"] == 422
 
 
 @pytest.mark.asyncio
-async def test_paypal_create_subscription_connection_error(
+async def test_paypal_create_subscription_network_error(
     integration,
     credentials_resolver,
     logger,
     bot_id
 ):
-    class FakeConnectionError(Exception):
+    class FakeRequestError(Exception):
         pass
 
-    with patch.object(paypal_module, "PAYPAL_SDK_AVAILABLE", True), \
-         patch.object(paypal_module, "PayPalConnectionError", FakeConnectionError), \
-         patch.object(paypal_module, "paypalrestsdk") as mock_sdk, \
-         patch.object(paypal_module, "BillingSubscription") as mock_subscription_class:
-        mock_sdk.Api.return_value = MagicMock()
+    mock_cm, mock_client = _make_async_client([])
+    mock_client.post.side_effect = FakeRequestError("timeout")
 
-        mock_subscription = MagicMock()
-        mock_subscription.create.side_effect = FakeConnectionError("timeout")
-        mock_subscription_class.return_value = mock_subscription
-
+    with patch.object(paypal_module, "HTTPX_AVAILABLE", True), \
+         patch.object(paypal_module.httpx, "RequestError", FakeRequestError), \
+         patch.object(paypal_module.httpx, "AsyncClient", return_value=mock_cm):
         result = await integration.execute(
-            config={"plan_id": "P-999"},
+            config={"plan_id": "P-901"},
             credentials_resolver=credentials_resolver,
             bot_id=bot_id,
             logger=logger
         )
 
-        assert result["response"]["ok"] is False
-        assert result["response"]["error"]["type"] == "network_error"
+    assert result["response"]["ok"] is False
+    assert result["response"]["error"]["type"] == "network_error"

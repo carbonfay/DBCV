@@ -1,7 +1,6 @@
-"""PayPal Create Subscription integration using paypalrestsdk."""
+"""PayPal Create Subscription integration using httpx."""
 from __future__ import annotations
 
-import os
 from typing import Any, Dict
 from uuid import UUID
 
@@ -10,66 +9,27 @@ from app.auth.credentials_resolver import CredentialsResolver
 from app.loggers.bot import BotLogger
 
 try:
-    import paypalrestsdk
-    try:
-        from paypalrestsdk import Resource
-    except Exception:
-        from paypalrestsdk.resource import Resource
-    try:
-        from paypalrestsdk import exceptions as paypal_exceptions
-    except Exception:
-        paypal_exceptions = None
-    PAYPAL_SDK_AVAILABLE = True
+    import httpx
+    HTTPX_AVAILABLE = True
 except ImportError:
-    paypalrestsdk = None
-    Resource = None
-    paypal_exceptions = None
-    PAYPAL_SDK_AVAILABLE = False
+    httpx = None
+    HTTPX_AVAILABLE = False
 
 
-class PayPalSDKError(Exception):
-    """Base error for PayPal SDK handling."""
+PAYPAL_SANDBOX_API_BASE = "https://api-m.sandbox.paypal.com"
+PAYPAL_LIVE_API_BASE = "https://api-m.paypal.com"
 
 
-class PayPalConnectionError(PayPalSDKError):
-    """Network error when calling PayPal SDK."""
-
-
-class PayPalUnauthorized(PayPalSDKError):
-    """Auth error when calling PayPal SDK."""
-
-
-class PayPalServerError(PayPalSDKError):
-    """Server error returned by PayPal SDK."""
-
-
-class PayPalResourceNotFound(PayPalSDKError):
-    """Resource not found error from PayPal SDK."""
-
-
-if paypal_exceptions:
-    PayPalConnectionError = getattr(paypal_exceptions, "ConnectionError", PayPalConnectionError)
-    PayPalUnauthorized = getattr(paypal_exceptions, "UnauthorizedAccess", PayPalUnauthorized)
-    PayPalServerError = getattr(paypal_exceptions, "ServerError", PayPalServerError)
-    PayPalResourceNotFound = getattr(paypal_exceptions, "ResourceNotFound", PayPalResourceNotFound)
-
-
-if PAYPAL_SDK_AVAILABLE and Resource is not None:
-    class BillingSubscription(Resource):
-        """PayPal Billing Subscription resource."""
-        path = "/v1/billing/subscriptions"
-else:
-    BillingSubscription = None
-
-
-PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID", "")
-PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET", "")
-PAYPAL_MODE = os.getenv("PAYPAL_MODE", "")
-PAYPAL_BASE_URL = os.getenv("PAYPAL_BASE_URL", "")
+def _safe_json(response):
+    try:
+        return response.json()
+    except Exception:
+        text = getattr(response, "text", "")
+        return {"raw": text} if text else None
 
 
 class PaypalCreateSubscriptionIntegration(BaseIntegration):
-    """Create a PayPal subscription using paypalrestsdk."""
+    """Create a PayPal subscription using httpx."""
 
     @property
     def metadata(self) -> IntegrationMetadata:
@@ -182,12 +142,14 @@ class PaypalCreateSubscriptionIntegration(BaseIntegration):
             },
             credentials_provider="paypal",
             credentials_strategy="oauth",
-            library_name="paypalrestsdk>=1.13.0" if PAYPAL_SDK_AVAILABLE else None,
+            library_name="httpx>=0.27.0" if HTTPX_AVAILABLE else None,
             examples=[
                 {
                     "title": "Create subscription",
                     "config": {
                         "plan_id": "P-123456789",
+                        "start_time": "2026-12-01T12:00:00Z",
+                        "quantity": "1",
                         "subscriber": {
                             "email_address": "customer@example.com",
                             "name": {
@@ -201,6 +163,15 @@ class PaypalCreateSubscriptionIntegration(BaseIntegration):
                             "user_action": "SUBSCRIBE_NOW",
                             "return_url": "https://example.com/success",
                             "cancel_url": "https://example.com/cancel"
+                        },
+                        "custom_id": "order-12345",
+                        "payment_method": {
+                            "payer_selected": "PAYPAL",
+                            "payee_preferred": "IMMEDIATE_PAYMENT_REQUIRED"
+                        },
+                        "shipping_amount": {
+                            "currency_code": "USD",
+                            "value": "10.00"
                         }
                     }
                 }
@@ -214,21 +185,21 @@ class PaypalCreateSubscriptionIntegration(BaseIntegration):
         bot_id: UUID,
         logger: BotLogger
     ) -> Dict[str, Any]:
-        if not PAYPAL_SDK_AVAILABLE or BillingSubscription is None:
-            await logger.error("paypalrestsdk library is not available")
+        if not HTTPX_AVAILABLE:
+            await logger.error("httpx library is not available")
             return {
                 "response": {
                     "ok": False,
                     "error": {
                         "type": "missing_library",
-                        "message": "paypalrestsdk library is not installed"
+                        "message": "httpx library is not installed"
                     }
                 }
             }
 
         creds = await credentials_resolver.get_default_for(
             bot_id=bot_id,
-            provider="paypal",
+            provider="other",
             strategy="oauth"
         )
 
@@ -236,10 +207,13 @@ class PaypalCreateSubscriptionIntegration(BaseIntegration):
         if creds:
             payload = creds.get("payload", {}) or creds
 
-        client_id = payload.get("client_id") or payload.get("clientId") or PAYPAL_CLIENT_ID
-        client_secret = payload.get("client_secret") or payload.get("clientSecret") or PAYPAL_CLIENT_SECRET
-        mode = payload.get("mode") or payload.get("environment") or PAYPAL_MODE or "sandbox"
-        base_url = payload.get("base_url") or payload.get("api_base") or PAYPAL_BASE_URL
+        client_id = payload.get("client_id") or payload.get("clientId")
+        client_secret = payload.get("client_secret") or payload.get("clientSecret")
+        mode = payload.get("mode") or payload.get("environment") or "sandbox"
+        base_url = payload.get("base_url") or payload.get("api_base")
+
+        if not base_url:
+            base_url = PAYPAL_LIVE_API_BASE if mode in ("live", "production") else PAYPAL_SANDBOX_API_BASE
 
         if not client_id or not client_secret:
             await logger.error("PayPal credentials not found")
@@ -285,81 +259,83 @@ class PaypalCreateSubscriptionIntegration(BaseIntegration):
             if value is not None:
                 subscription_payload[field] = value
 
-        api_config = {
-            "mode": mode,
-            "client_id": client_id,
-            "client_secret": client_secret
-        }
-        if base_url:
-            api_config["api_base"] = base_url
+        token_url = f"{base_url}/v1/oauth2/token"
+        subscription_url = f"{base_url}/v1/billing/subscriptions"
 
         try:
-            api = paypalrestsdk.Api(api_config)
-            subscription = BillingSubscription(subscription_payload, api=api)
-            created = subscription.create()
-            if not created:
-                error_details = getattr(subscription, "error", None) or {
-                    "message": "Unknown PayPal API error"
-                }
-                await logger.error(f"PayPal API error: {error_details}")
-                return {
-                    "response": {
-                        "ok": False,
-                        "error": {
-                            "type": "api_error",
-                            "message": "PayPal API returned an error",
-                            "details": error_details
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                token_response = await client.post(
+                    token_url,
+                    data={"grant_type": "client_credentials"},
+                    auth=(client_id, client_secret),
+                    headers={"Accept": "application/json"}
+                )
+                token_data = _safe_json(token_response)
+                if token_response.status_code >= 400:
+                    error_type = "auth_error" if token_response.status_code in (401, 403) else "token_error"
+                    await logger.error(f"PayPal token error: {token_data}")
+                    return {
+                        "response": {
+                            "ok": False,
+                            "error": {
+                                "type": error_type,
+                                "message": "PayPal token request failed",
+                                "status_code": token_response.status_code,
+                                "details": token_data
+                            }
                         }
                     }
-                }
 
-            result = subscription.to_dict() if hasattr(subscription, "to_dict") else subscription.__dict__
-            return {
-                "response": {
-                    "ok": True,
-                    "result": result
-                }
-            }
-        except PayPalUnauthorized as e:
-            await logger.error(f"PayPal auth error: {e}")
-            return {
-                "response": {
-                    "ok": False,
-                    "error": {
-                        "type": "auth_error",
-                        "message": str(e)
+                access_token = token_data.get("access_token") if token_data else None
+                if not access_token:
+                    await logger.error("PayPal access_token not found in response")
+                    return {
+                        "response": {
+                            "ok": False,
+                            "error": {
+                                "type": "token_error",
+                                "message": "access_token not found in PayPal response",
+                                "details": token_data
+                            }
+                        }
+                    }
+
+                subscription_response = await client.post(
+                    subscription_url,
+                    json=subscription_payload,
+                    headers={
+                        "Authorization": f"Bearer {access_token}",
+                        "Content-Type": "application/json"
+                    }
+                )
+                subscription_data = _safe_json(subscription_response)
+                if subscription_response.status_code >= 400:
+                    await logger.error(f"PayPal API error: {subscription_data}")
+                    return {
+                        "response": {
+                            "ok": False,
+                            "error": {
+                                "type": "api_error",
+                                "message": "PayPal API returned an error",
+                                "status_code": subscription_response.status_code,
+                                "details": subscription_data
+                            }
+                        }
+                    }
+
+                return {
+                    "response": {
+                        "ok": True,
+                        "result": subscription_data
                     }
                 }
-            }
-        except PayPalConnectionError as e:
+        except httpx.RequestError as e:
             await logger.error(f"PayPal network error: {e}")
             return {
                 "response": {
                     "ok": False,
                     "error": {
                         "type": "network_error",
-                        "message": str(e)
-                    }
-                }
-            }
-        except PayPalServerError as e:
-            await logger.error(f"PayPal server error: {e}")
-            return {
-                "response": {
-                    "ok": False,
-                    "error": {
-                        "type": "server_error",
-                        "message": str(e)
-                    }
-                }
-            }
-        except PayPalResourceNotFound as e:
-            await logger.error(f"PayPal resource not found: {e}")
-            return {
-                "response": {
-                    "ok": False,
-                    "error": {
-                        "type": "not_found",
                         "message": str(e)
                     }
                 }
