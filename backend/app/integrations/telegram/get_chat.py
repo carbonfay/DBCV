@@ -200,12 +200,22 @@ class TelegramGetChatIntegration(BaseIntegration):
             }
 
             await logger.info(f"Successfully retrieved chat info for ID: {chat_id}")
-            return {
-                "response": {
-                    "ok": True,
-                    "result": result
+
+            # Подготовим результат с дополнительной информацией для отображения
+            response_data = {
+                "ok": True,
+                "result": result,
+                "execution_info": {
+                    "integration_id": "telegram_get_chat",
+                    "integration_name": "Telegram Get Chat",
+                    "executed_at": __import__('datetime').datetime.now().isoformat(),
+                    "input_params": {
+                        "chat_id": chat_id
+                    }
                 }
             }
+
+            return {"response": response_data}
         except TelegramError as e:
             await logger.error(f"Telegram error: {e}")
             return {

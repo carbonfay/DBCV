@@ -154,22 +154,39 @@ async def run_step(
                 }
 
                 # Выполняем интеграцию
-                result = await handler.handle(
+                integration_result = await handler.handle(
                     connection_group=connection_group_export,
                     context=context,
                     all_variables={}
                 )
 
-                if result:
+                if integration_result:
+                    # Возвращаем результат в формате, ожидаемом веб-интерфейсом
                     return {
-                        "status": "success",
-                        "step_id": str(step_id),
-                        "integration_result": result
+                        "results": [
+                            {
+                                "result": integration_result,
+                                "group_id": str(connection_group.id),
+                                "search_type": connection_group.search_type,
+                                "priority": connection_group.priority,
+                                "variables_updated": {}  # пока пустой, так как в этом контексте переменные не обновляются
+                            }
+                        ],
+                        "final_variables": {}  # финальные переменные пока пустые
                     }
                 else:
                     return {
-                        "status": "integration_no_result",
-                        "step_id": str(step_id)
+                        "results": [
+                            {
+                                "result": None,
+                                "group_id": str(connection_group.id),
+                                "search_type": connection_group.search_type,
+                                "priority": connection_group.priority,
+                                "variables_updated": {},
+                                "error": "Integration returned no result"
+                            }
+                        ],
+                        "final_variables": {}
                     }
             except Exception as e:
                 await logger.error(f"Error executing integration in step {step_id}: {str(e)}")
