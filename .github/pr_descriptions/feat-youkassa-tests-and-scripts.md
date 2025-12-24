@@ -46,4 +46,6 @@
 ## Дополнительная информация
 
 - Фикстуры с примерными ответами (`payments_list.json`, `payment_detail.json`, `receipt_create.json`) находятся в отдельных ветках и PRs — это позволяет поэтапно ревьюить данные отдельно от кода.
+- Live run results and analysis are available in `.github/pr_descriptions/youkassa-live-results.md` (contains requests/responses, explanations and recommended next steps).
+- **Live run summary (added on branch update):** listing returned an empty payments list; standalone receipt attempts failed due to validation (see `scripts/youkassa_create_standalone_results.json`); scripts were updated to include stdlib HTTP implementation and Idempotence-Key handling for receipt creation attempts.
 - Если хотите, могу автоматически создать PR тела из этих файлов или опубликовать результаты запуска в комментариях PR. Для автоматического редактирования описаний PR требуется доступ к GitHub (gh CLI или токен)."}
