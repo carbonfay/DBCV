@@ -47,6 +47,9 @@ discord.py>=2.3.0
 openai>=1.0.0
 yandexcloud>=0.1.0
 
+# Developer tools
+PyGithub>=1.55
+
 # Storage
 google-api-python-client>=2.0.0
 dropbox>=11.36.0
