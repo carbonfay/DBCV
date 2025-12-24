@@ -1,45 +1,29 @@
-"""VK Send Message интеграция используя vk-api библиотеку."""
+"""VK Send Message интеграция используя httpx библиотеку."""
 from typing import Dict, Any
 from uuid import UUID
 import json
-import os
 import random
 
 from app.integrations.base import BaseIntegration, IntegrationMetadata
 from app.auth.credentials_resolver import CredentialsResolver
 from app.loggers.bot import BotLogger
 
-# Переменные окружения и константы для настройки токена и версии API.
-VK_ACCESS_TOKEN_ENV_VAR = "VK_ACCESS_TOKEN"
-VK_API_VERSION_ENV_VAR = "VK_API_VERSION"
+# Константы для настройки токена и версии API.
 VK_DEFAULT_API_VERSION = "5.131"
 VK_RANDOM_ID_MIN = 1
 VK_RANDOM_ID_MAX = 2**31 - 1
-
-VK_ACCESS_TOKEN = os.getenv(VK_ACCESS_TOKEN_ENV_VAR)
-VK_API_VERSION = os.getenv(VK_API_VERSION_ENV_VAR, VK_DEFAULT_API_VERSION)
+VK_API_VERSION = VK_DEFAULT_API_VERSION
+VK_TOKEN_KEYS = ("access_token", "token", "api_key", "vk_token")
+VK_API_URL = "https://api.vk.com/method/messages.send"
+VK_HTTP_TIMEOUT = 10.0
 
 # Импортируем библиотеку НАПРЯМУЮ в backend код
 try:
-    import vk_api
-    from vk_api import exceptions as vk_exceptions
-    VK_API_AVAILABLE = True
+    import httpx
+    HTTPX_AVAILABLE = True
 except ImportError:
-    VK_API_AVAILABLE = False
-    vk_api = None
-    vk_exceptions = None
-
-if VK_API_AVAILABLE:
-    VK_API_ERRORS = tuple(
-        exc for exc in (
-            getattr(vk_exceptions, "ApiError", None),
-            getattr(vk_exceptions, "VkApiError", None),
-            getattr(vk_exceptions, "VkApiHttpError", None),
-            getattr(vk_exceptions, "VkApiClientException", None),
-        ) if exc is not None
-    ) or (Exception,)
-else:
-    VK_API_ERRORS = (Exception,)
+    HTTPX_AVAILABLE = False
+    httpx = None
 
 
 def _coerce_vk_bool(value: Any) -> int | None:
@@ -65,7 +49,7 @@ def _prepare_keyboard(keyboard: Any) -> str:
 
 
 class VkSendMessageIntegration(BaseIntegration):
-    """Интеграция для отправки сообщений в VK через vk-api."""
+    """Интеграция для отправки сообщений в VK через httpx."""
 
     @property
     def metadata(self) -> IntegrationMetadata:
@@ -133,9 +117,9 @@ class VkSendMessageIntegration(BaseIntegration):
                     }
                 }
             },
-            credentials_provider="vk",
+            credentials_provider="other",
             credentials_strategy="api_key",
-            library_name="vk-api>=11.9.9" if VK_API_AVAILABLE else None,
+            library_name="httpx>=0.27.0" if HTTPX_AVAILABLE else None,
             examples=[
                 {
                     "title": "Простое сообщение",
@@ -165,7 +149,7 @@ class VkSendMessageIntegration(BaseIntegration):
         logger: BotLogger
     ) -> Dict[str, Any]:
         """
-        Выполняет интеграцию используя библиотеку vk-api.
+        Выполняет интеграцию используя библиотеку httpx.
 
         Args:
             config: Параметры интеграции
@@ -176,23 +160,23 @@ class VkSendMessageIntegration(BaseIntegration):
         Returns:
             Результат выполнения в формате системы
         """
-        if not VK_API_AVAILABLE:
-            await logger.error("vk-api library is not available")
+        if not HTTPX_AVAILABLE:
+            await logger.error("httpx library is not available")
             return {
                 "response": {
                     "ok": False,
                     "error_code": 500,
-                    "description": "vk-api library is not installed"
+                    "description": "httpx library is not installed"
                 }
             }
 
         creds = await credentials_resolver.get_default_for(
             bot_id=bot_id,
-            provider="vk",
+            provider="other",
             strategy="api_key"
         )
 
-        if not creds and not VK_ACCESS_TOKEN:
+        if not creds:
             await logger.error("VK credentials not found")
             return {
                 "response": {
@@ -206,16 +190,11 @@ class VkSendMessageIntegration(BaseIntegration):
         if not payload:
             payload = creds or {}
 
-        access_token = (
-            payload.get("access_token")
-            or payload.get("token")
-            or payload.get("api_key")
-            or payload.get("vk_token")
-        )
-
-        if not access_token and VK_ACCESS_TOKEN:
-            access_token = VK_ACCESS_TOKEN
-            await logger.warning("Using VK access token from environment variable VK_ACCESS_TOKEN")
+        access_token = None
+        for key in VK_TOKEN_KEYS:
+            if payload.get(key):
+                access_token = payload.get(key)
+                break
 
         if not access_token:
             await logger.error(f"VK token not found in credentials. Available keys: {list(payload.keys())}")
@@ -264,6 +243,8 @@ class VkSendMessageIntegration(BaseIntegration):
             "peer_id": peer_id_value,
             "message": str(message),
             "random_id": random_id,
+            "access_token": access_token,
+            "v": VK_API_VERSION,
         }
 
         attachment = _normalize_comma_list(config.get("attachment"))
@@ -313,26 +294,76 @@ class VkSendMessageIntegration(BaseIntegration):
             params["forward_messages"] = forward_messages
 
         try:
-            vk_session = vk_api.VkApi(token=access_token, api_version=VK_API_VERSION)
-            vk = vk_session.get_api()
-            result = vk.messages.send(**params)
+            async with httpx.AsyncClient(timeout=VK_HTTP_TIMEOUT) as client:
+                response = await client.post(VK_API_URL, data=params)
+                response.raise_for_status()
+                try:
+                    payload = response.json()
+                except ValueError as exc:
+                    await logger.error(f"VK API invalid JSON response: {exc}")
+                    return {
+                        "response": {
+                            "ok": False,
+                            "error_code": 500,
+                            "description": "VK API returned invalid JSON"
+                        }
+                    }
+
+            if isinstance(payload, dict) and payload.get("error"):
+                error = payload.get("error") or {}
+                description = (
+                    error.get("error_msg")
+                    or error.get("error_text")
+                    or "VK API error"
+                )
+                return {
+                    "response": {
+                        "ok": False,
+                        "error_code": error.get("error_code", 500),
+                        "description": description
+                    }
+                }
+
+            result = payload.get("response") if isinstance(payload, dict) else None
+            message_id = result
+            if isinstance(result, dict):
+                message_id = result.get("message_id") or result.get("id")
+
+            if message_id is None:
+                await logger.error("VK API did not return message_id")
+                return {
+                    "response": {
+                        "ok": False,
+                        "error_code": 500,
+                        "description": "VK API response missing message_id"
+                    }
+                }
 
             return {
                 "response": {
                     "ok": True,
                     "result": {
-                        "message_id": result,
+                        "message_id": message_id,
                         "peer_id": peer_id_value,
                         "random_id": random_id
                     }
                 }
             }
-        except VK_API_ERRORS as exc:
-            await logger.error(f"VK API error: {exc}")
+        except httpx.HTTPStatusError as exc:
+            await logger.error(f"VK API HTTP status error: {exc}")
             return {
                 "response": {
                     "ok": False,
-                    "error_code": getattr(exc, "error_code", 500),
+                    "error_code": exc.response.status_code if exc.response else 500,
+                    "description": str(exc)
+                }
+            }
+        except httpx.RequestError as exc:
+            await logger.error(f"VK API request error: {exc}")
+            return {
+                "response": {
+                    "ok": False,
+                    "error_code": 502,
                     "description": str(exc)
                 }
             }
