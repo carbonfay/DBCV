@@ -41,7 +41,8 @@ class GitHubGetRepositoryIntegration(BaseIntegration):
                     }
                 }
             },
-            credentials_provider="github",
+            # Исправлено: используем provider="other"
+            credentials_provider="other",
             credentials_strategy="api_key",
             library_name="PyGithub>=1.55" if PYGITHUB_AVAILABLE else None,
             examples=[
@@ -92,10 +93,10 @@ class GitHubGetRepositoryIntegration(BaseIntegration):
                 }
             }
 
-        # Получаем credentials (ожидаем api_key / token)
+        # Исправлено: запрашиваем provider="other"
         creds = await credentials_resolver.get_default_for(
             bot_id=bot_id,
-            provider="github",
+            provider="other",
             strategy="api_key"
         )
 
@@ -115,8 +116,8 @@ class GitHubGetRepositoryIntegration(BaseIntegration):
 
         token = None
         if isinstance(payload, dict):
-            # Common keys: access_token, token
-            token = payload.get("access_token") or payload.get("token") or payload.get("pat")
+            # Добавили проверку 'api_key', так как это стандартное поле для стратегии api_key
+            token = payload.get("api_key") or payload.get("access_token") or payload.get("token") or payload.get("pat")
         # fallback: if creds is string
         if not token and isinstance(creds, str):
             token = creds
