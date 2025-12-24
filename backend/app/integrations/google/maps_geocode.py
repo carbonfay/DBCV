@@ -102,7 +102,7 @@ class GoogleMapsGeocodeIntegration(BaseIntegration):
                 },
                 "required": ["address"],
             },
-            credentials_provider="google_maps",
+            credentials_provider="other",
             credentials_strategy="api_key",
             library_name="googlemaps>=4.10.0" if GOOGLE_MAPS_AVAILABLE else None,
             examples=[
