@@ -121,6 +121,18 @@ def _get_all_providers() -> List[ProviderInfo]:
             }
         ),
         ProviderInfo(
+            value="moodle",
+            label="Moodle",
+            description="Moodle Web Services API (??????? URL ? ?????)",
+            supported_strategies=["api_key"],
+            payload_examples={
+                "api_key": {
+                    "base_url": "https://moodle.example.com",
+                    "token": "YOUR_MOODLE_TOKEN"
+                }
+            }
+        ),
+        ProviderInfo(
             value="other",
             label="Другое",
             description="Другой провайдер",

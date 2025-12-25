@@ -10,7 +10,7 @@ from urllib.parse import quote
 import httpx
 from openai import AsyncOpenAI
 
-from config import config
+from mcp.config import config
 
 logger = logging.getLogger(__name__)
 

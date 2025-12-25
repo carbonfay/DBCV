@@ -5,8 +5,8 @@ from typing import Dict, Any, List
 
 from mcp.types import Tool, TextContent, CallToolRequest, CallToolResult
 
-from client import DBCVAPIClient
-from schemas import StepCreate, StepUpdate
+from mcp.client import DBCVAPIClient
+from mcp.schemas import StepCreate, StepUpdate
 from .common import DEFAULT_ALLOWED_ROLES, ensure_authorized_roles
 
 logger = logging.getLogger(__name__)
