@@ -238,3 +238,4 @@ class MoodleGetCourseIntegration(BaseIntegration):
                     "description": str(e)
                 }
             }
+

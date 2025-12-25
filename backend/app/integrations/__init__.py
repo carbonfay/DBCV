@@ -9,7 +9,6 @@ except ImportError:
 try:
     from app.integrations.moodle import *  # noqa: F401, F403
 except ImportError:
-    # Библиотека не установлена, пропускаем
     pass
 
 # Внутренние интеграции DBCV
