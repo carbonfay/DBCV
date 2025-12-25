@@ -41,7 +41,7 @@ class GitHubCreateIssueIntegration(BaseIntegration):
                     "labels": {"type": "array", "items": {"type": "string"}, "title": "Labels", "description": "Список меток"}
                 }
             },
-            credentials_provider="github",
+            credentials_provider="other", # ИЗМЕНЕНО: под твой Credentials
             credentials_strategy="api_key",
             library_name="PyGithub>=1.55" if PYGITHUB_AVAILABLE else None,
             examples=[
@@ -74,29 +74,41 @@ class GitHubCreateIssueIntegration(BaseIntegration):
             await logger.error("owner, repo and title are required")
             return {"response": {"ok": False, "error_code": 400, "description": "owner, repo and title are required"}}
 
-        creds = await credentials_resolver.get_default_for(bot_id=bot_id, provider="github", strategy="api_key")
+        # Получаем credentials (провайдер other)
+        creds = await credentials_resolver.get_default_for(bot_id=bot_id, provider="other", strategy="api_key")
+        
         if not creds:
             await logger.error("GitHub credentials not found")
-            return {"response": {"ok": False, "error_code": 401, "description": "GitHub token not found in credentials"}}
+            return {"response": {"ok": False, "error_code": 401, "description": "Credentials not found in system"}}
 
-        payload = creds.get("payload", {}) if isinstance(creds, dict) else {}
-        if not payload:
-            payload = creds
-
+        # Универсальный поиск токена
         token = None
-        if isinstance(payload, dict):
-            token = payload.get("access_token") or payload.get("token") or payload.get("pat")
+        if isinstance(creds, dict):
+            payload = creds.get("payload", {})
+            if isinstance(payload, dict):
+                # Добавляем api_key первым в список поиска
+                token = (payload.get("api_key") or 
+                         payload.get("token") or 
+                         payload.get("access_token"))
+        
         if not token and isinstance(creds, str):
             token = creds
 
         if not token:
-            await logger.error("GitHub token not found in credentials payload")
+            await logger.error("GitHub token (api_key) not found in credentials payload")
             return {"response": {"ok": False, "error_code": 401, "description": "GitHub token not found in credentials"}}
 
         try:
             gh = Github(token)
             repo = gh.get_repo(f"{owner}/{repo_name}")
-            issue = repo.create_issue(title=str(title), body=str(body) if body is not None else None, assignees=assignees or None, labels=labels or None)
+            
+            # POST запрос через PyGithub
+            issue = repo.create_issue(
+                title=str(title), 
+                body=str(body) if body is not None else None, 
+                assignees=assignees or None, 
+                labels=labels or None
+            )
 
             result = {
                 "number": issue.number,
@@ -112,8 +124,7 @@ class GitHubCreateIssueIntegration(BaseIntegration):
 
         except GithubException as e:
             await logger.error(f"GitHub API error: {e}")
-            status = getattr(e, 'status', None)
-            return {"response": {"ok": False, "error_code": status or 500, "description": str(e)}}
+            return {"response": {"ok": False, "error_code": e.status, "description": str(e)}}
         except Exception as e:
             await logger.error(f"Unexpected error in GitHub create_issue integration: {e}")
             return {"response": {"ok": False, "error_code": 500, "description": str(e)}}
