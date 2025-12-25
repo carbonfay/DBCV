@@ -161,18 +161,13 @@
 ---
 
 ### Категория: E-commerce
-
-#### Wildberries API
-- **Официальная документация**: [Wildberries API для поставщиков](https://openapi.wildberries.ru/)
-- **Контент**: [Контент API](https://openapi.wildberries.ru/content/api/v1/)
-- **Поставки**: [Поставки API](https://openapi.wildberries.ru/supplies/api/v1/)
-- **Аналитика**: [Аналитика API](https://openapi.wildberries.ru/analytics/api/v1/)
-
 #### Ozon API
-- **Официальная документация**: [Ozon Seller API](https://docs.ozon.ru/api/seller/)
-- **Товары**: [API товаров](https://docs.ozon.ru/api/seller/#tag/productAPI)
-- **Заказы**: [API заказов](https://docs.ozon.ru/api/seller/#tag/orderAPI)
-- **Склад**: [API склада](https://docs.ozon.ru/api/seller/#tag/warehouseAPI)
+#### Wildberries API
+ - **Официальная документация**: [Wildberries API для поставщиков](https://openapi.wildberries.ru/)
+ - **Контент**: [Контент API](https://openapi.wildberries.ru/content/api/v1/)
+ - **Поставки**: [Поставки API](https://openapi.wildberries.ru/supplies/api/v1/)
+ - **Аналитика**: [Аналитика API](https://openapi.wildberries.ru/analytics/api/v1/)
+#### Ozon API
 
 ---
 
