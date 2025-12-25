@@ -11,10 +11,10 @@ from app.loggers.bot import BotLogger
 
 # Try to import the SDK directly
 try:
-    from yookassa import Payment, Configuration  # type: ignore
-    from yookassa.domain.exceptions import ApiError  # type: ignore
+    from yookassa import Payment, Configuration
+    from yookassa.domain.exceptions import ApiError
     YOOKASSA_AVAILABLE = True
-except Exception:
+except ImportError:
     Payment = None
     Configuration = None
     ApiError = Exception
@@ -41,7 +41,7 @@ class YoukassaGetPaymentIntegration(BaseIntegration):
                     "payment_id": {"type": "string", "title": "Payment ID", "description": "ID платежа (например, '21b23b5b-...')"}
                 }
             },
-            credentials_provider="youkassa",
+            credentials_provider="other",  # Исправлено: должно быть "other", как в get_payments
             credentials_strategy="api_key",
             library_name="yookassa>=2.3.0" if YOOKASSA_AVAILABLE else None,
             examples=[
@@ -84,7 +84,7 @@ class YoukassaGetPaymentIntegration(BaseIntegration):
         # Получаем credentials
         creds = await credentials_resolver.get_default_for(
             bot_id=bot_id,
-            provider="youkassa",
+            provider="other",  # Исправлено: теперь соответствует get_payments
             strategy="api_key"
         )
 
@@ -98,57 +98,75 @@ class YoukassaGetPaymentIntegration(BaseIntegration):
                 }
             }
 
-        payload = creds.get("payload", {}) if isinstance(creds, dict) else {}
-        if not payload:
-            payload = creds if isinstance(creds, dict) else {}
-
-        account_id = (
-            payload.get("account_id") or payload.get("shop_id") or payload.get("shopId") or payload.get("accountId")
-        )
-        secret_key = (
-            payload.get("secret_key") or payload.get("secret") or payload.get("secretKey") or payload.get("token")
-        )
-        oauth_token = payload.get("oauth_token") or payload.get("auth_token") or payload.get("authToken")
-
-        if oauth_token and Configuration and hasattr(Configuration, "configure_auth_token"):
-            try:
-                Configuration.configure_auth_token(str(oauth_token))
-            except Exception as e:
-                await logger.error(f"Failed to configure yookassa auth token: {e}")
-                return {
-                    "response": {
-                        "ok": False,
-                        "error_code": 500,
-                        "description": "Failed to configure yookassa auth token"
-                    }
-                }
-        elif account_id and secret_key and Configuration and hasattr(Configuration, "configure"):
-            try:
-                Configuration.configure(str(account_id), str(secret_key))
-            except Exception as e:
-                await logger.error(f"Failed to configure yookassa credentials: {e}")
-                return {
-                    "response": {
-                        "ok": False,
-                        "error_code": 500,
-                        "description": "Failed to configure yookassa credentials"
-                    }
-                }
-        else:
-            await logger.error("YouKassa credentials are missing required fields (account_id and secret_key or oauth_token)")
+        # Извлекаем payload: может быть в `payload` или в корне
+        payload = creds.get("payload", creds) if isinstance(creds, dict) else {}
+        if not isinstance(payload, dict):
+            await logger.error("YouKassa credentials payload is not a dictionary")
             return {
                 "response": {
                     "ok": False,
                     "error_code": 401,
-                    "description": "YouKassa credentials are missing required fields (account_id and secret_key or oauth_token)"
+                    "description": "Invalid credential format: payload must be a dictionary"
+                }
+            }
+
+        account_id = (
+            payload.get("account_id") or 
+            payload.get("shop_id") or 
+            payload.get("shopId") or 
+            payload.get("accountId")
+        )
+        secret_key = (
+            payload.get("secret_key") or 
+            payload.get("api_key") or 
+            payload.get("secretKey") or 
+            payload.get("apiKey") or
+            payload.get("secret")
+        )
+        oauth_token = (
+            payload.get("oauth_token") or 
+            payload.get("auth_token") or 
+            payload.get("authToken") or
+            payload.get("token")
+        )
+
+        # Логгируем наличие полей (без вывода значений)
+        await logger.debug(f"Found credentials: account_id={bool(account_id)}, secret_key={bool(secret_key)}, oauth_token={bool(oauth_token)}")
+
+        # Настройка аутентификации
+        try:
+            if oauth_token:
+                Configuration.configure_auth_token(oauth_token)
+                await logger.info("Configured YooKassa with OAuth token")
+            elif account_id and secret_key:
+                Configuration.configure(str(account_id), str(secret_key))
+                await logger.info(f"Configured YooKassa with account_id={account_id}")
+            else:
+                await logger.error(
+                    "Missing required credentials: need either 'oauth_token' or 'account_id' and 'secret_key'"
+                )
+                return {
+                    "response": {
+                        "ok": False,
+                        "error_code": 401,
+                        "description": "YouKassa credentials are missing required fields: need either 'oauth_token' or 'account_id' and 'secret_key'"
+                    }
+                }
+        except Exception as e:
+            await logger.error(f"Failed to configure YooKassa authentication: {e}")
+            return {
+                "response": {
+                    "ok": False,
+                    "error_code": 500,
+                    "description": f"Failed to configure authentication: {str(e)}"
                 }
             }
 
         try:
-            # Используем SDK напрямую
-            res = Payment.find_one(str(payment_id))  # type: ignore
+            # Получаем платеж по ID
+            res = Payment.find_one(str(payment_id))
 
-            # Попытка привести ответ к словарю
+            # Конвертируем ответ
             if hasattr(res, "to_dict"):
                 result = res.to_dict()
             elif hasattr(res, "__dict__"):
@@ -162,12 +180,13 @@ class YoukassaGetPaymentIntegration(BaseIntegration):
                     "result": result
                 }
             }
-        except ApiError as e:  # type: ignore
-            await logger.error(f"YouKassa API error: {e}")
+        except ApiError as e:
+            status_code = getattr(e, "http_code", 500)
+            await logger.error(f"YouKassa API error [{status_code}]: {e}")
             return {
                 "response": {
                     "ok": False,
-                    "error_code": getattr(e, 'http_code', 500),
+                    "error_code": status_code,
                     "description": str(e)
                 }
             }
