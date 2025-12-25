@@ -51,7 +51,7 @@ class GitHubGetPullRequestIntegration(BaseIntegration):
                     }
                 }
             },
-            credentials_provider="github",
+            credentials_provider="other",
             credentials_strategy="api_key",
             library_name="PyGithub>=1.55" if PYGITHUB_AVAILABLE else None,
             examples=[
@@ -99,7 +99,7 @@ class GitHubGetPullRequestIntegration(BaseIntegration):
         # Получаем credentials
         creds = await credentials_resolver.get_default_for(
             bot_id=bot_id,
-            provider="github",
+            provider="other",
             strategy="api_key"
         )
 
@@ -118,21 +118,25 @@ class GitHubGetPullRequestIntegration(BaseIntegration):
             payload = creds
 
         token = None
-        if isinstance(payload, dict):
-            token = payload.get("access_token") or payload.get("token") or payload.get("pat")
+        if isinstance(creds, dict):
+            payload = creds.get("payload", {})
+            # Проверяем наличие ключа api_key в payload, как на твоем скриншоте
+            if isinstance(payload, dict):
+                token = payload.get("api_key")
+        
+        # Если вдруг токен передан строкой напрямую
         if not token and isinstance(creds, str):
             token = creds
 
         if not token:
-            await logger.error("GitHub token not found in credentials payload")
+            await logger.error("GitHub token (api_key) not found in credentials")
             return {
                 "response": {
                     "ok": False,
                     "error_code": 401,
-                    "description": "GitHub token not found in credentials"
+                    "description": "GitHub token not found in credentials. Check 'api_key' in Payload."
                 }
             }
-
         try:
             gh = Github(token)
             full_name = f"{owner}/{repo_name}"
