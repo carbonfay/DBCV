@@ -41,7 +41,7 @@ class YoukassaGetPaymentIntegration(BaseIntegration):
                     "payment_id": {"type": "string", "title": "Payment ID", "description": "ID платежа (например, '21b23b5b-...')"}
                 }
             },
-            credentials_provider="other",  # Исправлено: должно быть "other", как в get_payments
+            credentials_provider="other",
             credentials_strategy="api_key",
             library_name="yookassa>=2.3.0" if YOOKASSA_AVAILABLE else None,
             examples=[
@@ -84,7 +84,7 @@ class YoukassaGetPaymentIntegration(BaseIntegration):
         # Получаем credentials
         creds = await credentials_resolver.get_default_for(
             bot_id=bot_id,
-            provider="other",  # Исправлено: теперь соответствует get_payments
+            provider="other",
             strategy="api_key"
         )
 
@@ -98,60 +98,40 @@ class YoukassaGetPaymentIntegration(BaseIntegration):
                 }
             }
 
-        # Извлекаем payload: может быть в `payload` или в корне
-        payload = creds.get("payload", creds) if isinstance(creds, dict) else {}
+        # Извлекаем payload: ожидается словарь в поле 'payload'.
+        # Фолбэк: если 'account_id' и 'secret_key' находятся в корне, используем весь словарь как payload.
+        payload = None
+        if isinstance(creds, dict):
+            payload = creds.get("payload", creds)
         if not isinstance(payload, dict):
-            await logger.error("YouKassa credentials payload is not a dictionary")
+            await logger.error("YouKassa credentials missing 'payload' dict")
             return {
                 "response": {
                     "ok": False,
                     "error_code": 401,
-                    "description": "Invalid credential format: payload must be a dictionary"
+                    "description": "Invalid credentials format: 'payload' dict is required"
                 }
             }
 
-        account_id = (
-            payload.get("account_id") or 
-            payload.get("shop_id") or 
-            payload.get("shopId") or 
-            payload.get("accountId")
-        )
-        secret_key = (
-            payload.get("secret_key") or 
-            payload.get("api_key") or 
-            payload.get("secretKey") or 
-            payload.get("apiKey") or
-            payload.get("secret")
-        )
-        oauth_token = (
-            payload.get("oauth_token") or 
-            payload.get("auth_token") or 
-            payload.get("authToken") or
-            payload.get("token")
-        )
+        # Извлекаем account_id и secret_key
+        account_id = str(payload.get("shop_id") or payload.get("account_id") or "").strip()
+        secret_key = str(payload.get("secret_key") or payload.get("api_key") or "").strip()
 
-        # Логгируем наличие полей (без вывода значений)
-        await logger.debug(f"Found credentials: account_id={bool(account_id)}, secret_key={bool(secret_key)}, oauth_token={bool(oauth_token)}")
+        if not account_id or not secret_key:
+            safe_keys = sorted([k for k in payload.keys()])
+            await logger.error(f"Missing shop_id/account_id or secret_key in payload; available keys={safe_keys}")
+            return {
+                "response": {
+                    "ok": False,
+                    "error_code": 401,
+                    "description": "YooKassa credentials missing 'shop_id/account_id' or 'secret_key' in payload"
+                }
+            }
 
         # Настройка аутентификации
         try:
-            if oauth_token:
-                Configuration.configure_auth_token(oauth_token)
-                await logger.info("Configured YooKassa with OAuth token")
-            elif account_id and secret_key:
-                Configuration.configure(str(account_id), str(secret_key))
-                await logger.info(f"Configured YooKassa with account_id={account_id}")
-            else:
-                await logger.error(
-                    "Missing required credentials: need either 'oauth_token' or 'account_id' and 'secret_key'"
-                )
-                return {
-                    "response": {
-                        "ok": False,
-                        "error_code": 401,
-                        "description": "YouKassa credentials are missing required fields: need either 'oauth_token' or 'account_id' and 'secret_key'"
-                    }
-                }
+            Configuration.configure(account_id, secret_key)
+            await logger.info(f"Configured YooKassa with account_id={account_id}")
         except Exception as e:
             await logger.error(f"Failed to configure YooKassa authentication: {e}")
             return {

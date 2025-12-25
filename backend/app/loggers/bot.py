@@ -23,6 +23,9 @@ class BotLogger:
     async def error(self, message: str):
         await self.log(message, logging.ERROR)
 
+    async def debug(self, message: str):
+        await self.log(message, logging.DEBUG)
+
     async def log(self, message: str, level: int = logging.INFO):
         # Форматирование сообщения
         record = self.logger.makeRecord(
