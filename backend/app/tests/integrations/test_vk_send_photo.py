@@ -5,6 +5,24 @@ from uuid import UUID
 from app.integrations.vk.send_photo import VkSendPhotoIntegration
 
 
+@pytest.fixture
+def integration():
+    """Создает экземпляр VK Send Photo интеграции."""
+    return VkSendPhotoIntegration()
+
+
+def test_vk_send_photo_metadata(integration):
+    """Тест метаданных VK Send Photo интеграции."""
+    metadata = integration.metadata
+    
+    assert metadata.id == "vk_send_photo"
+    assert metadata.version == "1.0.1"
+    assert metadata.name == "VK Send Photo"
+    assert metadata.category == "messaging"
+    assert metadata.credentials_provider == "other"
+    assert metadata.credentials_strategy == "api_key"
+
+
 class DummyLogger:
     def __init__(self):
         self.errors = []
@@ -57,26 +75,10 @@ async def test_vk_send_photo_success(monkeypatch, tmp_path):
         def get_api(self):
             class API:
                 def __init__(self):
-                    pass
+                    self.messages = self
 
-                def messages(self, *a, **k):
-                    pass
-
-                def messages_send(self, **kwargs):
+                def send(self, **kw):
                     return {"message_id": 123}
-
-                def messages_send_raw(self, **kwargs):
-                    return {"message_id": 123}
-
-                def __getattr__(self, item):
-                    # emulate vk object method access like vk.messages.send
-                    if item == "messages":
-                        class Msgs:
-                            def send(self_inner, **kw):
-                                return {"message_id": 123}
-
-                        return Msgs()
-                    raise AttributeError(item)
 
             return API()
 
@@ -118,16 +120,10 @@ async def test_vk_send_photo_api_error(monkeypatch, tmp_path):
         def get_api(self):
             class API:
                 def __init__(self):
-                    pass
+                    self.messages = self
 
-                def __getattr__(self, item):
-                    if item == "messages":
-                        class Msgs:
-                            def send(self_inner, **kw):
-                                raise Exception("vk api send failed")
-
-                        return Msgs()
-                    raise AttributeError(item)
+                def send(self, **kw):
+                    raise Exception("vk api send failed")
 
             return API()
 

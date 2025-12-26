@@ -54,7 +54,7 @@ class VkSendPhotoIntegration(BaseIntegration):
                     }
                 }
             },
-            credentials_provider="vk",
+            credentials_provider="other",
             credentials_strategy="api_key",
             library_name="vk-api>=11.9.9",
             examples=[
@@ -91,7 +91,7 @@ class VkSendPhotoIntegration(BaseIntegration):
             }
 
         creds = await credentials_resolver.get_default_for(
-            bot_id=bot_id, provider="vk", strategy="api_key"
+            bot_id=bot_id, provider="other", strategy="api_key"
         )
 
         if not creds:
