@@ -47,7 +47,7 @@ def test_yandex_weather_forecast_metadata(integration):
     assert metadata.version == "1.0.0"
     assert metadata.name == "Yandex Weather Forecast"
     assert metadata.category == "weather"
-    assert metadata.credentials_provider == "yandex"
+    assert metadata.credentials_provider == "other"
     assert metadata.credentials_strategy == "api_key"
 
 

@@ -71,7 +71,7 @@ class YandexWeatherForecastIntegration(BaseIntegration):
                     }
                 }
             },
-            credentials_provider="yandex",
+            credentials_provider="other",
             credentials_strategy="api_key",
             library_name="httpx" if HTTPX_AVAILABLE else None,
             examples=[
@@ -129,7 +129,7 @@ class YandexWeatherForecastIntegration(BaseIntegration):
         # Получаем api_key из credentials
         creds = await credentials_resolver.get_default_for(
             bot_id=bot_id,
-            provider="yandex",
+            provider="other",
             strategy="api_key"
         )
         
@@ -148,8 +148,8 @@ class YandexWeatherForecastIntegration(BaseIntegration):
         if not payload:
             # Если payload нет, возможно данные в корне (для обратной совместимости)
             payload = creds
-        
-        api_key = payload.get("api_key") or payload.get("token")
+
+        api_key = payload.get("api_key") or payload.get("token") or payload.get("yandex_api_key")
         if not api_key:
             await logger.error(f"api_key not found in credentials. Available keys: {list(payload.keys())}")
             return {

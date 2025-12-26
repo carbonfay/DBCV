@@ -13,6 +13,7 @@ class Provider(str, Enum):
     amocrm = "amocrm"
     yandex_cloud = "yandex_cloud"
     yandex_id = "yandex_id"
+    yandex = "yandex"
     telegram = "telegram"
     discord = "discord"
     openai = "openai"
