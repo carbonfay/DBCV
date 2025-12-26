@@ -1,1 +1,0 @@
-"""Wildberries integrations."""
