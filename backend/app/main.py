@@ -118,4 +118,12 @@ app.add_middleware(
 if __name__ == "__main__":
     UVICORN_LOGGING_CONFIG["formatters"]["default"]["fmt"] = "%(asctime)s [%(name)s] %(levelprefix)s %(message)s"
     UVICORN_LOGGING_CONFIG["formatters"]["access"]["fmt"] = '%(levelprefix)s %(asctime)s :: %(client_addr)s - "%(request_line)s" %(status_code)s'
-    uvicorn.run("main:app", host="0.0.0.0", reload=True, port=8003, log_config=UVICORN_LOGGING_CONFIG)
+    # Исключаем тесты из отслеживания изменений
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        reload=True,
+        reload_excludes=["tests/**", "**/test_*.py", "**/__pycache__/**"],
+        port=8003,
+        log_config=UVICORN_LOGGING_CONFIG
+    )
