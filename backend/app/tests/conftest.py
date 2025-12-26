@@ -19,7 +19,10 @@ from app.initial_data import init_db
 
 @pytest.fixture(scope="session", autouse=True)
 async def engine() -> AsyncIterable[AsyncEngine]:
-    import testing.postgresql
+    try:
+        import testing.postgresql
+    except ImportError:
+        pytest.skip("testing.postgresql is not installed", allow_module_level=True)
     from sqlalchemy.pool import NullPool
 
     with testing.postgresql.Postgresql() as postgresql:

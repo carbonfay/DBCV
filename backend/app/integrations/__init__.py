@@ -6,5 +6,12 @@ except ImportError:
     # Библиотека не установлена, пропускаем
     pass
 
+# OpenWeatherMap
+try:
+    from app.integrations.openweathermap import *  # noqa: F401, F403
+except ImportError:
+    # Библиотека не установлена, пропускаем
+    pass
+
 # Внутренние интеграции DBCV
 from app.integrations.dbcv import *  # noqa: F401, F403

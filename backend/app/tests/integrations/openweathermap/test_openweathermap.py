@@ -49,7 +49,7 @@ def test_openweathermap_metadata(integration):
     assert metadata.id == "openweathermap_get_uv_index"
     assert metadata.version == "1.0.0"
     assert metadata.category == "weather"
-    assert metadata.credentials_provider == "openweathermap"
+    assert metadata.credentials_provider == "other"
     assert metadata.credentials_strategy == "api_key"
     assert metadata.library_name == "httpx"
 

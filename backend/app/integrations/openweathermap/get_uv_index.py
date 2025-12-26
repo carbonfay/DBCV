@@ -12,7 +12,10 @@ from app.loggers.bot import BotLogger
 class OpenweathermapGetUvIndexIntegration(BaseIntegration):
     """
     Получение текущего UV Index по координатам через OpenWeatherMap API.
-
+    
+    Использует провайдер 'other' с 'api_key' стратегией, так как OpenWeatherMap
+    не является встроенным провайдером DBCV.
+    
     Пример использования:
         integration = OpenweathermapGetUvIndexIntegration()
         result = await integration.execute(
@@ -29,7 +32,7 @@ class OpenweathermapGetUvIndexIntegration(BaseIntegration):
             id="openweathermap_get_uv_index",
             version="1.0.0",
             name="OpenWeatherMap Get UV Index",
-            description="Получение текущего UV Index по координатам",
+            description="Получение текущего UV Index по координатам через OpenWeatherMap API",
             category="weather",
             icon_s3_key="icons/integrations/openweathermap.svg",
             color="#4DA3FF",
@@ -41,15 +44,20 @@ class OpenweathermapGetUvIndexIntegration(BaseIntegration):
                         "type": "number",
                         "title": "Latitude",
                         "description": "Географическая широта",
+                        "minimum": -90,
+                        "maximum": 90
                     },
                     "lon": {
                         "type": "number",
                         "title": "Longitude",
                         "description": "Географическая долгота",
+                        "minimum": -180,
+                        "maximum": 180
                     },
                 },
             },
-            credentials_provider="openweathermap",
+            # ИСПРАВЛЕНО: используем 'other' провайдер вместо 'openweathermap'
+            credentials_provider="other",
             credentials_strategy="api_key",
             library_name="httpx",
             examples=[
@@ -89,34 +97,39 @@ class OpenweathermapGetUvIndexIntegration(BaseIntegration):
                 }
             }
 
-        # Получаем credentials для OpenWeatherMap
+        # ИСПРАВЛЕНО: используем 'other' провайдер вместо 'openweathermap'
         creds = await credentials_resolver.get_default_for(
             bot_id=bot_id,
-            provider="openweathermap",
+            provider="other",  # Изменено с "openweathermap" на "other"
             strategy="api_key",
         )
 
         if not creds:
-            await logger.error("OpenWeatherMap credentials not found")
+            await logger.error("OpenWeatherMap credentials not found (провайдер: other)")
             return {
                 "response": {
                     "ok": False,
                     "error_code": 401,
-                    "description": "OpenWeatherMap credentials not found",
+                    "description": "OpenWeatherMap credentials not found. Используйте провайдер 'other' с API ключом OpenWeatherMap в поле 'api_key'",
                 }
             }
 
-        payload = creds.get("payload", {}) or creds
-        api_key = payload.get("api_key")
+        # Извлекаем API ключ из credentials
+        payload = creds.get("payload", {})
+        if not payload:
+            # Для обратной совместимости
+            payload = creds
+        
+        api_key = payload.get("api_key") or payload.get("apikey") or payload.get("key")
         if not api_key:
             await logger.error(
-                f"api_key not found in credentials. Available keys: {list(payload.keys())}"
+                f"API key not found in credentials. Available keys: {list(payload.keys())}"
             )
             return {
                 "response": {
                     "ok": False,
                     "error_code": 401,
-                    "description": "api_key not found in credentials",
+                    "description": "API key not found in credentials. Добавьте API ключ OpenWeatherMap в поле 'api_key'",
                 }
             }
 
@@ -130,7 +143,13 @@ class OpenweathermapGetUvIndexIntegration(BaseIntegration):
                 data = response.json()
         except httpx.HTTPStatusError as e:
             status_code = e.response.status_code
-            error_text = e.response.text
+            # Пытаемся получить сообщение об ошибке из JSON ответа
+            try:
+                error_data = e.response.json()
+                error_text = error_data.get("message", str(e))
+            except:
+                error_text = str(e)
+            
             await logger.error(
                 f"OpenWeatherMap HTTP error: {status_code} {error_text}"
             )
@@ -138,7 +157,7 @@ class OpenweathermapGetUvIndexIntegration(BaseIntegration):
                 "response": {
                     "ok": False,
                     "error_code": status_code,
-                    "description": error_text,
+                    "description": f"OpenWeatherMap API error: {error_text}",
                 }
             }
         except httpx.RequestError as e:
@@ -147,7 +166,7 @@ class OpenweathermapGetUvIndexIntegration(BaseIntegration):
                 "response": {
                     "ok": False,
                     "error_code": 500,
-                    "description": str(e),
+                    "description": f"Request error: {str(e)}",
                 }
             }
         except Exception as e:
@@ -156,7 +175,7 @@ class OpenweathermapGetUvIndexIntegration(BaseIntegration):
                 "response": {
                     "ok": False,
                     "error_code": 500,
-                    "description": str(e),
+                    "description": f"Unexpected error: {str(e)}",
                 }
             }
 
