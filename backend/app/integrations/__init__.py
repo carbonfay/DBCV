@@ -6,5 +6,11 @@ except ImportError:
     # Библиотека не установлена, пропускаем
     pass
 
+# Подключаем gitverse интеграции (если есть)
+try:
+    from app.integrations.gitverse import *  # noqa: F401, F403
+except ImportError:
+    pass
+
 # Внутренние интеграции DBCV
 from app.integrations.dbcv import *  # noqa: F401, F403

@@ -17,6 +17,7 @@ class Provider(str, Enum):
     discord = "discord"
     openai = "openai"
     other = "other"
+    gitverse = "gitverse"
 
 
 class Strategy(str, Enum):
