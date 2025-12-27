@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import logging
 import logging.config
@@ -21,7 +21,7 @@ from app.api.routes import sockets
 from app.logging_config import LOGGING_CONFIG
 from fastadmin import fastapi_app as admin_app
 from fastadmin.settings import settings as admin_settings
-from config import settings
+from app.config import settings
 
 admin_settings.ADMIN_USER_MODEL = "UserModel"
 admin_settings.ADMIN_USER_MODEL_USERNAME_FIELD = "username"
@@ -45,7 +45,7 @@ from app.admin.models import (
     credentials,
 )
 from app.admin import dashboard
-from database import sessionmanager
+from app.database import sessionmanager
 from app.broker import broker
 from app.fast_socket_app import fast_socket_app
 from app.engine.request import global_http_client
