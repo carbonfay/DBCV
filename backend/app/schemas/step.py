@@ -1,9 +1,9 @@
 ﻿from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union, Dict, Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.utils.decorators import partial_model
 from app.schemas.block import Block
@@ -69,6 +69,29 @@ class StepTemplate(StepBase):
         return value
 
 
+class StepExecuteIn(BaseModel):
+    """Входные параметры для выполнения шага."""
+    # Context variables in format {"bot": {...}, "channel": {...}, "session": {...}, "user": {...}}
+    variables: Dict[str, Any] = Field(default_factory=dict)
+    bot_id: Optional[Union[UUID, str]] = None
+    context: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Дополнительный контекст выполнения")
+
+
+class GroupExecutionResult(BaseModel):
+    """Результат выполнения одной группы связей."""
+    group_id: str
+    search_type: str
+    priority: int
+    result: Any = Field(default=None, description="Результат выполнения handler")
+    variables_updated: Optional[Dict[str, Any]] = Field(default=None, description="Обновленные переменные после группы")
+
+
+class StepExecuteOut(BaseModel):
+    """Результат выполнения шага."""
+    results: List[GroupExecutionResult] = Field(default_factory=list, description="Результаты выполнения всех групп")
+    final_variables: Dict[str, Any] = Field(default_factory=dict, description="Финальное состояние переменных после всех групп")
+
+
 def _rebuild_models() -> None:
     for model in (
         StepBase,
@@ -79,6 +102,9 @@ def _rebuild_models() -> None:
         StepCreate,
         StepUpdate,
         StepTemplate,
+        StepExecuteIn,
+        GroupExecutionResult,
+        StepExecuteOut,
     ):
         model.model_rebuild()
 
