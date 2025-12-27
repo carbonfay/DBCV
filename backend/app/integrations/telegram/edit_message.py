@@ -105,7 +105,7 @@ class TelegramEditMessageIntegration(BaseIntegration):
             provider="telegram",
             strategy="api_key"
         )
-
+        
         if not creds:
             await logger.error("Telegram credentials not found")
             return {
@@ -115,30 +115,80 @@ class TelegramEditMessageIntegration(BaseIntegration):
                     "description": "Telegram bot_token not found in credentials"
                 }
             }
-
-        # Инициализируем бота
-        bot = Bot(token=creds["api_key"])
-
-        # Извлекаем параметры
+        
+        # Credentials возвращаются с ключом "payload", который содержит расшифрованные данные
+        payload = creds.get("payload", {})
+        if not payload:
+            # Если payload нет, возможно данные в корне (для обратной совместимости)
+            payload = creds
+        
+        bot_token = payload.get("bot_token") or payload.get("token")
+        if not bot_token:
+            await logger.error(f"bot_token not found in credentials. Available keys: {list(payload.keys())}")
+            return {
+                "response": {
+                    "ok": False,
+                    "error_code": 401,
+                    "description": "bot_token not found in credentials"
+                }
+            }
+        
+        # Получаем параметры из config
         chat_id = config.get("chat_id")
         message_id = config.get("message_id")
         new_text = config.get("new_text")
-
-        try:
-            # Редактируем сообщение
-            message = await bot.edit_message_text(
-                chat_id=chat_id,
-                message_id=message_id,
-                text=new_text,
-                parse_mode=config.get("parse_mode")
-            )
-            return {"response": {"ok": True, "result": message.to_dict()}}
-        except TelegramError as e:
-            await logger.error(f"Error editing message: {str(e)}")
+        parse_mode = config.get("parse_mode")
+        
+        if not chat_id or message_id is None or not new_text:
+            await logger.error("chat_id, message_id and new_text are required")
             return {
                 "response": {
                     "ok": False,
                     "error_code": 400,
+                    "description": "chat_id, message_id and new_text are required"
+                }
+            }
+        
+        # ИСПОЛЬЗУЕМ БИБЛИОТЕКУ НАПРЯМУЮ
+        try:
+            bot = Bot(token=bot_token)
+            result = await bot.edit_message_text(
+                chat_id=str(chat_id),
+                message_id=int(message_id),
+                text=str(new_text),
+                parse_mode=parse_mode if parse_mode else None
+            )
+            
+            # Возвращаем результат в формате системы
+            return {
+                "response": {
+                    "ok": True,
+                    "result": {
+                        "message_id": result.message_id,
+                        "chat": {
+                            "id": result.chat.id,
+                            "type": result.chat.type
+                        },
+                        "text": result.text,
+                        "date": result.date
+                    }
+                }
+            }
+        except TelegramError as e:
+            await logger.error(f"Telegram error: {e}")
+            return {
+                "response": {
+                    "ok": False,
+                    "error_code": e.error_code if hasattr(e, 'error_code') else 500,
+                    "description": str(e)
+                }
+            }
+        except Exception as e:
+            await logger.error(f"Unexpected error: {e}")
+            return {
+                "response": {
+                    "ok": False,
+                    "error_code": 500,
                     "description": str(e)
                 }
             }
