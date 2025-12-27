@@ -110,6 +110,17 @@ def _get_all_providers() -> List[ProviderInfo]:
             supported_strategies=["api_key", "oauth"]
         ),
         ProviderInfo(
+            value="openweathermap",
+            label="OpenWeatherMap",
+            description="OpenWeatherMap API",
+            supported_strategies=["api_key"],
+            payload_examples={
+                "api_key": {
+                    "api_key": "YOUR_OPENWEATHERMAP_API_KEY"
+                }
+            }
+        ),
+        ProviderInfo(
             value="openai",
             label="OpenAI",
             description="OpenAI API",

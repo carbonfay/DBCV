@@ -16,7 +16,7 @@ services:
     volumes:
       - ./backend/:/backend/
     restart: always
-    command: sh -c "alembic upgrade head && python initial_data.py && python main.py"
+    command: sh -c "alembic upgrade head && python initial_data.py && uvicorn app.main:app --host 0.0.0.0 --port 8003"
     depends_on:
       postgres:
         condition: service_healthy
