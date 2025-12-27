@@ -2,9 +2,9 @@ FROM python:3.12.7-alpine
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 RUN mkdir -p /backend
-RUN apk add --no-cache git
-# Проверяем версию git
-RUN git --version
+RUN apk add --no-cache git curl
+# Проверяем версии
+RUN git --version && curl --version
 
 # Добавляем git в PATH
 ENV PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
