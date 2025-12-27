@@ -42,6 +42,7 @@ openai>=1.0.0
 # Messaging
 python-telegram-bot>=20.0
 discord.py>=2.3.0
+vk-api>=11.9.9
 
 # AI
 openai>=1.0.0
