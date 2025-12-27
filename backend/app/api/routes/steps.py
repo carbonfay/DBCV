@@ -111,39 +111,39 @@ async def run_step(
     step = await crud_step.get_step(session, step_id, StepModel.default_eager_relationships)
     if not step:
         raise HTTPException(status_code=404, detail="Step not found")
-    
+
     await BotAccessChecker._has_access_by_step(session, step_id, current_user, AccessType.EDITOR)
-    
+
     bot_id = step_in.bot_id or step.bot_id
     if not bot_id:
         raise HTTPException(status_code=400, detail="bot_id is required")
-    
+
     dm = DataManager(Redis.from_url(settings.REDIS_URL), session.bind)
     logger = BotLogger(str(bot_id))
     logger.set_step(str(step_id))
-    
+
     bot_data = await dm.get_bot(str(bot_id))
     if not bot_data:
         raise HTTPException(status_code=404, detail="Bot not found")
     bot = BotProcessor(**bot_data)
-    
+
     step_export = schemas_step.StepExport.model_validate(step)
-    
+
     sorted_groups = sorted(step_export.connection_groups, key=lambda g: g.priority)
-    
+
     all_variables = step_in.variables.copy() if step_in.variables else {}
     context = step_in.context.copy() if step_in.context else {}
-    
+
     merged_context = deep_merge_dicts(all_variables, context)
-    
+
     resolver = CredentialsResolver(dm)
     auth_service = AuthService(resolver)
-    
+
     results = []
-    
+
     for group in sorted_groups:
         await logger.info(f"Processing connection group {group.id} (type: {group.search_type}, priority: {group.priority})...")
-        
+
         handler = ConnectionHandlerFactory.get_handler(
             group.search_type,
             logger,
@@ -151,7 +151,7 @@ async def run_step(
             auth=auth_service,
             data_manager=dm
         )
-        
+
         if not handler:
             if group.search_type == SearchType.message:
                 await logger.info("Skipping message type connection group")
@@ -166,44 +166,44 @@ async def run_step(
                     variables_updated=None
                 ))
                 continue
-        
+
         try:
             handler_result = await handler.handle(
                 connection_group=group,
                 context=merged_context,
                 all_variables=all_variables
             )
-            
+
             if handler_result is not None:
                 merged_context = deep_merge_dicts(merged_context, handler_result)
                 if isinstance(handler_result, dict):
                     context = deep_merge_dicts(context, handler_result)
-            
+
             variables_before = all_variables.copy()
             if group.variables:
                 try:
                     variables_save_as = group.variables
                     if isinstance(variables_save_as, str):
                         variables_save_as = json.loads(variables_save_as)
-                    
+
                     all_variables = await update_variables_dict(
                         all_variables,
-                        session, 
+                        session,
                         variables_save_as,
                         merged_context
                     )
-                    
+
                     await logger.info("Variables updated in memory")
                 except Exception as e:
                     await logger.error(f"Error saving variables: {e}")
-            
+
             variables_updated = None
             if group.variables and all_variables != variables_before:
                 variables_updated = {}
                 for key in all_variables:
                     if key not in variables_before or all_variables[key] != variables_before.get(key):
                         variables_updated[key] = all_variables[key]
-            
+
             results.append(schemas_step.GroupExecutionResult(
                 group_id=str(group.id),
                 search_type=group.search_type.value,
@@ -211,12 +211,12 @@ async def run_step(
                 result=handler_result,
                 variables_updated=variables_updated
             ))
-            
+
         except Exception as e:
             await logger.error(f"Error executing connection group {group.id}: {e}")
             traceback_str = ''.join(traceback.format_exception(type(e), e, e.__traceback__))
             await logger.error(f"Traceback: {traceback_str}")
-            
+
             results.append(schemas_step.GroupExecutionResult(
                 group_id=str(group.id),
                 search_type=group.search_type.value,
@@ -224,11 +224,9 @@ async def run_step(
                 result={"error": str(e), "traceback": traceback_str},
                 variables_updated=None
             ))
-    
+
     return schemas_step.StepExecuteOut(
         results=results,
         final_variables=all_variables
     )
-
-
 
