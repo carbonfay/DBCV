@@ -1,9 +1,12 @@
 from typing import Annotated, Any, Optional, Union
 from uuid import UUID
+import json
+import traceback
 
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy import select
 from fastapi.responses import JSONResponse
+from redis.asyncio import Redis
 
 import app.crud.step as crud_step
 import app.crud.bot as crud_bot
@@ -17,11 +20,16 @@ from app.models.access import AccessType
 from app.schemas.message import Message, MessageCreate, MessagePublic
 from app.api.dependencies.auth import get_current_user, CurrentUser, CurrentDeveloper, CurrentAdmin
 from app.api.dependencies.auth import BotAccessChecker
-from app.managers.data_manager import DataManager
 from app.config import settings
-from redis.asyncio import Redis
-from app.database import sessionmanager
-from app.models.bot import BotModel
+from app.managers.data_manager import DataManager
+from app.loggers import BotLogger
+from app.schemas.bot import BotProcessor
+from app.engine.bot_processor import ConnectionHandlerFactory
+from app.engine.variables import update_variables_dict
+from app.auth.credentials_resolver import CredentialsResolver
+from app.auth.service import AuthService
+from app.utils.dict import deep_merge_dicts
+from app.models.connection import SearchType
 
 router = APIRouter()
 
@@ -86,112 +94,139 @@ async def delete_step(session: SessionDep, current_user: CurrentUser, step_id: U
     return Message(message="Step deleted successfully.")
 
 
-from pydantic import BaseModel
-
-class RunStepRequest(BaseModel):
-    integration_config: dict = {}
-
-@router.post("/{step_id}/run", response_model=dict)
+@router.post(
+    "/{step_id}/run",
+    response_model=schemas_step.StepExecuteOut,
+)
 async def run_step(
     step_id: Union[UUID, str],
-    request: RunStepRequest,
     session: SessionDep,
-    current_user: CurrentUser
+    current_user: CurrentUser,
+    step_in: schemas_step.StepExecuteIn,
 ) -> Any:
     """
-    Run a step manually.
+    Выполняет все действия в шаге: проход по всем группам связей и выполнение действий
+    (код, интеграции, HTTP-запросы) в порядке приоритета.
     """
-    # Получаем шаг
-    step = await session.get(StepModel, step_id)
+    step = await crud_step.get_step(session, step_id, StepModel.default_eager_relationships)
     if not step:
         raise HTTPException(status_code=404, detail="Step not found")
 
-    # Проверяем доступ к боту
-    await BotAccessChecker._has_access(session, step.bot_id, current_user, AccessType.EDITOR)
+    await BotAccessChecker._has_access_by_step(session, step_id, current_user, AccessType.EDITOR)
 
-    # Подготовим данные для выполнения интеграции
-    redis = Redis.from_url(settings.CACHE_REDIS_URL)
-    data_manager = DataManager(redis, sessionmanager.engine)
+    bot_id = step_in.bot_id or step.bot_id
+    if not bot_id:
+        raise HTTPException(status_code=400, detail="bot_id is required")
 
-    # Используем BotLogger
-    from app.loggers.bot import BotLogger
-    logger = BotLogger(step.bot_id)
+    dm = DataManager(Redis.from_url(settings.REDIS_URL), session.bind)
+    logger = BotLogger(str(bot_id))
+    logger.set_step(str(step_id))
 
-    # Ищем интеграцию в connection_groups шага
-    from app.schemas.connection import ConnectionGroupExport
-    from app.engine.integration_handler import ConnectionIntegrationHandler
+    bot_data = await dm.get_bot(str(bot_id))
+    if not bot_data:
+        raise HTTPException(status_code=404, detail="Bot not found")
+    bot = BotProcessor(**bot_data)
 
-    # Проходим по всем connection_groups шага
-    for connection_group in step.connection_groups:
-        if connection_group.search_type == "integration":
-            # Создаем копию connection_group с обновленной конфигурацией, если она передана
-            import copy
-            connection_group_dict = connection_group.__dict__.copy()
-            # Удаляем служебные атрибуты SQLAlchemy
-            connection_group_dict = {k: v for k, v in connection_group_dict.items() if not k.startswith('_sa_')}
+    step_export = schemas_step.StepExport.model_validate(step)
 
-            if request.integration_config:
-                # Обновляем конфигурацию интеграции
-                connection_group_dict["integration_config"] = request.integration_config
+    sorted_groups = sorted(step_export.connection_groups, key=lambda g: g.priority)
 
-            connection_group_export = ConnectionGroupExport.model_validate(connection_group_dict)
+    all_variables = step_in.variables.copy() if step_in.variables else {}
+    context = step_in.context.copy() if step_in.context else {}
 
-            # Создаем handler для интеграции
-            handler = ConnectionIntegrationHandler(logger, data_manager, step.bot_id)
+    merged_context = deep_merge_dicts(all_variables, context)
 
-            try:
-                # Подготовим контекст с переменными пользователя
-                # Включим в контекст информацию о пользователе и боте
-                context = {
-                    "step_id": str(step_id),
-                    "user_id": str(current_user.id),
-                    "user": {
-                        "id": str(current_user.id),
-                        "username": current_user.username,
-                        "telegram_chat_id": getattr(current_user, 'telegram_chat_id', None)  # если поле существует
-                    },
-                    "bot_id": str(step.bot_id)
-                }
+    resolver = CredentialsResolver(dm)
+    auth_service = AuthService(resolver)
 
-                # Выполняем интеграцию
-                integration_result = await handler.handle(
-                    connection_group=connection_group_export,
-                    context=context,
-                    all_variables={}
-                )
+    results = []
 
-                if integration_result:
-                    # Возвращаем результат в формате, ожидаемом веб-интерфейсом
-                    return {
-                        "results": [
-                            {
-                                "result": integration_result,
-                                "group_id": str(connection_group.id),
-                                "search_type": connection_group.search_type,
-                                "priority": connection_group.priority,
-                                "variables_updated": {}  # пока пустой, так как в этом контексте переменные не обновляются
-                            }
-                        ],
-                        "final_variables": {}  # финальные переменные пока пустые
-                    }
-                else:
-                    return {
-                        "results": [
-                            {
-                                "result": None,
-                                "group_id": str(connection_group.id),
-                                "search_type": connection_group.search_type,
-                                "priority": connection_group.priority,
-                                "variables_updated": {},
-                                "error": "Integration returned no result"
-                            }
-                        ],
-                        "final_variables": {}
-                    }
-            except Exception as e:
-                await logger.error(f"Error executing integration in step {step_id}: {str(e)}")
-                raise HTTPException(status_code=500, detail=f"Error executing integration: {str(e)}")
+    for group in sorted_groups:
+        await logger.info(f"Processing connection group {group.id} (type: {group.search_type}, priority: {group.priority})...")
 
-    # Если не найдено интеграций для выполнения
-    raise HTTPException(status_code=400, detail="No integration found in step connection groups")
+        handler = ConnectionHandlerFactory.get_handler(
+            group.search_type,
+            logger,
+            bot=bot,
+            auth=auth_service,
+            data_manager=dm
+        )
+
+        if not handler:
+            if group.search_type == SearchType.message:
+                await logger.info("Skipping message type connection group")
+                continue
+            else:
+                await logger.warning(f"No handler found for search_type: {group.search_type}")
+                results.append(schemas_step.GroupExecutionResult(
+                    group_id=str(group.id),
+                    search_type=group.search_type.value,
+                    priority=group.priority,
+                    result=None,
+                    variables_updated=None
+                ))
+                continue
+
+        try:
+            handler_result = await handler.handle(
+                connection_group=group,
+                context=merged_context,
+                all_variables=all_variables
+            )
+
+            if handler_result is not None:
+                merged_context = deep_merge_dicts(merged_context, handler_result)
+                if isinstance(handler_result, dict):
+                    context = deep_merge_dicts(context, handler_result)
+
+            variables_before = all_variables.copy()
+            if group.variables:
+                try:
+                    variables_save_as = group.variables
+                    if isinstance(variables_save_as, str):
+                        variables_save_as = json.loads(variables_save_as)
+
+                    all_variables = await update_variables_dict(
+                        all_variables,
+                        session,
+                        variables_save_as,
+                        merged_context
+                    )
+
+                    await logger.info("Variables updated in memory")
+                except Exception as e:
+                    await logger.error(f"Error saving variables: {e}")
+
+            variables_updated = None
+            if group.variables and all_variables != variables_before:
+                variables_updated = {}
+                for key in all_variables:
+                    if key not in variables_before or all_variables[key] != variables_before.get(key):
+                        variables_updated[key] = all_variables[key]
+
+            results.append(schemas_step.GroupExecutionResult(
+                group_id=str(group.id),
+                search_type=group.search_type.value,
+                priority=group.priority,
+                result=handler_result,
+                variables_updated=variables_updated
+            ))
+
+        except Exception as e:
+            await logger.error(f"Error executing connection group {group.id}: {e}")
+            traceback_str = ''.join(traceback.format_exception(type(e), e, e.__traceback__))
+            await logger.error(f"Traceback: {traceback_str}")
+
+            results.append(schemas_step.GroupExecutionResult(
+                group_id=str(group.id),
+                search_type=group.search_type.value,
+                priority=group.priority,
+                result={"error": str(e), "traceback": traceback_str},
+                variables_updated=None
+            ))
+
+    return schemas_step.StepExecuteOut(
+        results=results,
+        final_variables=all_variables
+    )
 
