@@ -13,7 +13,7 @@ print()
 try:
     # Проверяем импорт самой интеграции напрямую
     print("1. Импорт класса интеграции...")
-    from app.integrations.Wildberries.update_stock import WildberriesUpdateStockIntegration
+    from app.integrations.Vildberries.update_stock import WildberriesUpdateStockIntegration
     print("   ✅ Класс импортирован")
     
     print("\n2. Создание экземпляра интеграции...")

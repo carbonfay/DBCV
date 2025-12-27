@@ -7,7 +7,7 @@ except ImportError:
     pass
 
 try:
-    from app.integrations.Wildberries import *  # noqa: F401, F403
+    from app.integrations.Vildberries import *  # noqa: F401, F403
 except ImportError:
     # Библиотека не установлена, пропускаем
     pass
