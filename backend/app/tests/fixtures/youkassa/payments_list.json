@@ -1,0 +1,17 @@
+{
+  "items": [
+    {
+      "id": "pay_1",
+      "amount": {"value": "1000.00", "currency": "RUB"},
+      "status": "succeeded",
+      "payment_method": "yoo_money"
+    },
+    {
+      "id": "pay_2",
+      "amount": {"value": "500.00", "currency": "RUB"},
+      "status": "canceled",
+      "payment_method": "bank_card"
+    }
+  ],
+  "next_cursor": null
+}

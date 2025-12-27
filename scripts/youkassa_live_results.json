@@ -1,0 +1,12 @@
+[
+  {
+    "integration": "youkassa_get_payments",
+    "request": {
+      "limit": 20
+    },
+    "response": {
+      "type": "list",
+      "items": []
+    }
+  }
+]
