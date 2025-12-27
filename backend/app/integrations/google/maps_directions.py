@@ -112,7 +112,7 @@ class GoogleMapsDirectionsIntegration(BaseIntegration):
                     }
                 }
             },
-            credentials_provider="google",
+            credentials_provider="other",
             credentials_strategy="api_key",
             library_name="googlemaps>=4.10.0" if GOOGLEMAPS_AVAILABLE else None,
             examples=[
@@ -175,15 +175,32 @@ class GoogleMapsDirectionsIntegration(BaseIntegration):
                 }
             }
         
-        # Получаем Google API key из credentials
-        creds = await credentials_resolver.get_default_for(
-            bot_id=bot_id,
-            provider="other",
-            strategy="api_key"
-        )
+        # Пробуем получить credentials из разных комбинаций (для максимальной гибкости)
+        creds = None
+        used_provider = None
+        used_strategy = None
+        
+        # Варианты для попытки (в порядке приоритета)
+        provider_strategy_combos = [
+            ("other", "api_key"),
+            ("google", "oauth"),
+            ("google", "api_key"),
+        ]
+        
+        for provider, strategy in provider_strategy_combos:
+            creds = await credentials_resolver.get_default_for(
+                bot_id=bot_id,
+                provider=provider,
+                strategy=strategy
+            )
+            if creds:
+                used_provider = provider
+                used_strategy = strategy
+                await logger.info(f"Found credentials: provider={provider}, strategy={strategy}")
+                break
         
         if not creds:
-            await logger.error("Google credentials not found")
+            await logger.error("Google API key not found for any provider/strategy combination")
             return {
                 "response": {
                     "ok": False,
@@ -198,14 +215,20 @@ class GoogleMapsDirectionsIntegration(BaseIntegration):
             # Если payload нет, возможно данные в корне (для обратной совместимости)
             payload = creds
         
-        api_key = payload.get("api_key")
+        # Извлекаем API key или access token в зависимости от стратегии
+        api_key = None
+        if used_strategy == "oauth":
+            api_key = payload.get("access_token")
+        else:
+            api_key = payload.get("api_key")
+        
         if not api_key:
-            await logger.error("api_key not found in Google credentials payload")
+            await logger.error(f"API key/token not found for strategy {used_strategy}")
             return {
                 "response": {
                     "ok": False,
                     "error_code": 401,
-                    "description": "api_key not found in credentials payload"
+                    "description": "API key/token not found in credentials payload"
                 }
             }
         
