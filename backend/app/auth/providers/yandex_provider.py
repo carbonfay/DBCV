@@ -164,6 +164,57 @@ class YandexIdOAuthProvider:
         return AccessToken(token_type="OAuth", access_token=access_token, expires_at=expires_at)
 
 
+class YandexMapsApiKeyProvider:
+    """
+    Провайдер для API-ключа Яндекс Карт.
+    В payload ожидает:
+      - api_key (строка)
+    Используется как простой API-ключ, без обновления.
+    """
+
+    # Нет необходимости в TOKEN_URL или других URL, так как ключ не обновляется
+
+    async def ensure(
+        self,
+        *,
+        bot_id: str,
+        profile: str,
+        creds_cfg: Mapping[str, Any],
+        profile_state: Optional[Mapping[str, Any]],
+        hints: Mapping[str, Any],
+        cache,
+    ) -> AccessToken:
+        provider = "yandex_maps"
+        strategy = str(creds_cfg.get("strategy", "api_key"))  # по умолчанию 'api_key'
+        scopes = None  # API-ключи не используют scopes
+
+        # Проверяем кэш (хотя API-ключ не меняется, кэширование всё равно полезно)
+        cached = cache.get(bot_id=bot_id, provider=provider, profile=profile, strategy=strategy, scopes=scopes)
+        if cached:
+            return cached
+
+        payload = creds_cfg["payload"]
+        api_key = payload.get("api_key") or payload.get("key")  # Поддерживаем оба варианта
+
+        if not api_key:
+            raise RuntimeError("yandex_maps: missing api_key in payload")
+
+        # Важно: API-ключ - это не токен, но мы используем AccessToken для совместимости
+        # с текущей архитектурой. expires_at = None, так как API-ключи не истекают.
+        token = AccessToken(token_type="ApiKey", access_token=api_key, expires_at=None)
+
+        # Сохраняем в кэш
+        cache.put(bot_id=bot_id, provider=provider, profile=profile, strategy=strategy, scopes=scopes, token=token)
+        return token
+
+    def apply_headers(self, headers: dict, token: AccessToken, hints: Mapping[str, Any]) -> None:
+        # API-ключ передается в заголовке или параметрах запроса, НЕ в Authorization
+        # Но этот метод может не использоваться для API-ключа, если он передается как параметр
+        # Оставляем как есть, но в интеграции мы его передаем как параметр geocode запроса
+        # headers["Authorization"] = f"Api-Key {token.access_token}" # НЕТ для Yandex Maps API
+        pass  # Для Yandex Maps API ключ передается как параметр, не заголовок
+
+
 def _parse_rfc3339_to_unix(s: Optional[str]) -> Optional[float]:
     if not s:
         return None

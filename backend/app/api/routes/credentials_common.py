@@ -93,6 +93,17 @@ def _get_all_providers() -> List[ProviderInfo]:
             supported_strategies=["oauth"]
         ),
         ProviderInfo(
+            value="yandex_maps",
+            label="Yandex Maps",
+            description="Yandex Maps",
+            supported_strategies=["api_key"],
+            payload_examples={
+                "api_key": {
+                    "api_key": "YOUR_MAPS_TOKEN_HERE"
+                }
+            }
+        ),
+        ProviderInfo(
             value="telegram",
             label="Telegram",
             description="Telegram Bot API",

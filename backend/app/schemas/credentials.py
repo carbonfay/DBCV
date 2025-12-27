@@ -12,6 +12,7 @@ class Provider(str, Enum):
     google = "google"
     amocrm = "amocrm"
     yandex_cloud = "yandex_cloud"
+    yandex_maps = "yandex_maps"
     yandex_id = "yandex_id"
     telegram = "telegram"
     discord = "discord"
