@@ -63,6 +63,8 @@ async def test_openweathermap_execute_success(
 
     with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
         mock_resp = MagicMock()
+        mock_resp.status_code = 200  # ДОБАВИТЬ!
+        mock_resp.headers.get.return_value = "application/json"  # ДОБАВИТЬ!
         mock_resp.json.return_value = mock_response_json
         mock_resp.raise_for_status.return_value = None
         mock_get.return_value = mock_resp
@@ -119,6 +121,8 @@ async def test_openweathermap_execute_http_error(
     """Тест обработки HTTPStatusError."""
     with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
         mock_resp = MagicMock()
+        mock_resp.status_code = 500  # ДОБАВИТЬ!
+        mock_resp.headers.get.return_value = "application/json"  # ДОБАВИТЬ!
         mock_resp.raise_for_status.side_effect = Exception("HTTP error")
         mock_get.return_value = mock_resp
 
@@ -130,6 +134,6 @@ async def test_openweathermap_execute_http_error(
         )
 
         assert result["response"]["ok"] is False
-        assert result["response"]["error_code"] == 500
+        assert result["response"]["error_code"] == 500  # Должно быть 500 из блока except
 
 

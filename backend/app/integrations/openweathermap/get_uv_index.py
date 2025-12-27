@@ -1,30 +1,21 @@
-"""OpenWeatherMap UV Index integration using httpx async client."""
-from typing import Any, Dict
+"""OpenWeatherMap Get UV Index интеграция используя httpx для прямых HTTP запросов."""
+from typing import Dict, Any
 from uuid import UUID
 
-import httpx
-
-from app.auth.credentials_resolver import CredentialsResolver
 from app.integrations.base import BaseIntegration, IntegrationMetadata
+from app.auth.credentials_resolver import CredentialsResolver
 from app.loggers.bot import BotLogger
+
+try:
+    import httpx
+    HTTPX_AVAILABLE = True
+except ImportError:
+    HTTPX_AVAILABLE = False
+    httpx = None
 
 
 class OpenweathermapGetUvIndexIntegration(BaseIntegration):
-    """
-    Получение текущего UV Index по координатам через OpenWeatherMap API.
-    
-    Использует провайдер 'other' с 'api_key' стратегией, так как OpenWeatherMap
-    не является встроенным провайдером DBCV.
-    
-    Пример использования:
-        integration = OpenweathermapGetUvIndexIntegration()
-        result = await integration.execute(
-            config={"lat": 55.7558, "lon": 37.6173},
-            credentials_resolver=credentials_resolver,
-            bot_id=bot_id,
-            logger=logger,
-        )
-    """
+    """Интеграция для получения UV Index через OpenWeatherMap API."""
 
     @property
     def metadata(self) -> IntegrationMetadata:
@@ -43,29 +34,25 @@ class OpenweathermapGetUvIndexIntegration(BaseIntegration):
                     "lat": {
                         "type": "number",
                         "title": "Latitude",
-                        "description": "Географическая широта",
-                        "minimum": -90,
-                        "maximum": 90
+                        "description": "Географическая широта"
                     },
                     "lon": {
                         "type": "number",
                         "title": "Longitude",
-                        "description": "Географическая долгота",
-                        "minimum": -180,
-                        "maximum": 180
-                    },
-                },
+                        "description": "Географическая долгота"
+                    }
+                }
             },
-            # ИСПРАВЛЕНО: используем 'other' провайдер вместо 'openweathermap'
+            # ИСПРАВЛЕНО: провайдер "other" вместо "openweathermap"
             credentials_provider="other",
             credentials_strategy="api_key",
-            library_name="httpx",
+            library_name="httpx" if HTTPX_AVAILABLE else None,
             examples=[
                 {
                     "title": "UV Index для Москвы",
-                    "config": {"lat": 55.7558, "lon": 37.6173},
+                    "config": {"lat": 55.7558, "lon": 37.6173}
                 }
-            ],
+            ]
         )
 
     async def execute(
@@ -73,110 +60,65 @@ class OpenweathermapGetUvIndexIntegration(BaseIntegration):
         config: Dict[str, Any],
         credentials_resolver: CredentialsResolver,
         bot_id: UUID,
-        logger: BotLogger,
+        logger: BotLogger
     ) -> Dict[str, Any]:
-        """
-        Выполняет запрос к OpenWeatherMap для получения UV Index.
-
-        Args:
-            config: Параметры интеграции (lat, lon).
-            credentials_resolver: Резолвер для получения credentials.
-            bot_id: ID бота, для которого запрашиваются credentials.
-            logger: Логгер для записи событий.
-        """
-        # Извлекаем координаты
-        lat = config.get("lat")
-        lon = config.get("lon")
-        if lat is None or lon is None:
-            await logger.error("lat and lon are required")
-            return {
-                "response": {
-                    "ok": False,
-                    "error_code": 400,
-                    "description": "lat and lon are required",
-                }
-            }
-
-        # ИСПРАВЛЕНО: используем 'other' провайдер вместо 'openweathermap'
-        creds = await credentials_resolver.get_default_for(
-            bot_id=bot_id,
-            provider="other",  # Изменено с "openweathermap" на "other"
-            strategy="api_key",
-        )
-
-        if not creds:
-            await logger.error("OpenWeatherMap credentials not found (провайдер: other)")
-            return {
-                "response": {
-                    "ok": False,
-                    "error_code": 401,
-                    "description": "OpenWeatherMap credentials not found. Используйте провайдер 'other' с API ключом OpenWeatherMap в поле 'api_key'",
-                }
-            }
-
-        # Извлекаем API ключ из credentials
-        payload = creds.get("payload", {})
-        if not payload:
-            # Для обратной совместимости
-            payload = creds
-        
-        api_key = payload.get("api_key") or payload.get("apikey") or payload.get("key")
-        if not api_key:
-            await logger.error(
-                f"API key not found in credentials. Available keys: {list(payload.keys())}"
-            )
-            return {
-                "response": {
-                    "ok": False,
-                    "error_code": 401,
-                    "description": "API key not found in credentials. Добавьте API ключ OpenWeatherMap в поле 'api_key'",
-                }
-            }
-
-        url = "https://api.openweathermap.org/data/2.5/uvi"
-        params = {"lat": lat, "lon": lon, "appid": api_key}
+        if not HTTPX_AVAILABLE:
+            await logger.error("httpx library is not available")
+            return {"response": {"ok": False, "error_code": 500, "description": "httpx library is not installed"}}
 
         try:
-            async with httpx.AsyncClient(timeout=30) as client:
-                response = await client.get(url, params=params)
-                response.raise_for_status()
-                data = response.json()
-        except httpx.HTTPStatusError as e:
-            status_code = e.response.status_code
-            # Пытаемся получить сообщение об ошибке из JSON ответа
-            try:
-                error_data = e.response.json()
-                error_text = error_data.get("message", str(e))
-            except:
-                error_text = str(e)
-            
-            await logger.error(
-                f"OpenWeatherMap HTTP error: {status_code} {error_text}"
+            # Получаем API ключ из credentials (провайдер "other")
+            creds = await credentials_resolver.get_default_for(
+                bot_id=bot_id,
+                provider="other",
+                strategy="api_key"
             )
-            return {
-                "response": {
-                    "ok": False,
-                    "error_code": status_code,
-                    "description": f"OpenWeatherMap API error: {error_text}",
-                }
-            }
-        except httpx.RequestError as e:
-            await logger.error(f"OpenWeatherMap request error: {e}")
-            return {
-                "response": {
-                    "ok": False,
-                    "error_code": 500,
-                    "description": f"Request error: {str(e)}",
-                }
-            }
-        except Exception as e:
-            await logger.error(f"Unexpected OpenWeatherMap error: {e}")
-            return {
-                "response": {
-                    "ok": False,
-                    "error_code": 500,
-                    "description": f"Unexpected error: {str(e)}",
-                }
-            }
 
-        return {"response": {"ok": True, "result": data}}
+            if not creds:
+                await logger.error("API credentials not found")
+                return {"response": {"ok": False, "error_code": 401, "description": "API key not found in credentials"}}
+
+            # Извлекаем API ключ
+            api_key = None
+            if isinstance(creds, dict):
+                payload = creds.get("payload", creds)
+                if isinstance(payload, dict):
+                    api_key = payload.get("api_key") or payload.get("apikey") or payload.get("key")
+            elif hasattr(creds, 'api_key'):
+                api_key = creds.api_key
+            elif hasattr(creds, 'apikey'):
+                api_key = creds.apikey
+            elif hasattr(creds, 'key'):
+                api_key = creds.key
+
+            if not api_key:
+                await logger.error("API key not found in credentials")
+                return {"response": {"ok": False, "error_code": 401, "description": "API key not found in credentials"}}
+
+            # Получаем параметры
+            lat = config.get("lat")
+            lon = config.get("lon")
+
+            if lat is None or lon is None:
+                await logger.error("lat and lon are required")
+                return {"response": {"ok": False, "error_code": 400, "description": "lat and lon are required"}}
+
+            # Выполняем запрос
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    "https://api.openweathermap.org/data/2.5/uvi",
+                    params={"lat": lat, "lon": lon, "appid": api_key}
+                )
+
+                if response.status_code == 200:
+                    data = response.json()
+                    return {"response": {"ok": True, "result": data}}
+                else:
+                    error_data = response.json() if response.headers.get("content-type", "").startswith("application/json") else {}
+                    error_message = error_data.get("message", f"HTTP {response.status_code}")
+                    await logger.error(f"OpenWeatherMap API error: {error_message}")
+                    return {"response": {"ok": False, "error_code": response.status_code, "description": error_message}}
+
+        except Exception as e:
+            await logger.error(f"Unexpected error: {e}")
+            return {"response": {"ok": False, "error_code": 500, "description": str(e)}}
