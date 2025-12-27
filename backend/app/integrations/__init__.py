@@ -6,11 +6,10 @@ except ImportError:
     # Библиотека не установлена, пропускаем
     pass
 
-# Wildberries интеграции
 try:
-    from app.integrations.wildberries import *  # noqa: F401, F403
+    from app.integrations.Vildberries import *  # noqa: F401, F403
 except ImportError:
-    # Пакет может отсутствовать
+    # Библиотека не установлена, пропускаем
     pass
 
 # Внутренние интеграции DBCV
