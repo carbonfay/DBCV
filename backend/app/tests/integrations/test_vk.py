@@ -3,9 +3,9 @@ from uuid import UUID
 from unittest.mock import AsyncMock, MagicMock, patch
 
 # Импорты ваших классов
-from app.integrations.vk.send_message import VkSendMessageIntegration
-from app.integrations.vk.send_photo import VkSendPhotoIntegration
-from app.integrations.vk.get_user import VkGetUserInfoIntegration
+from app.integrations.vk_shinkevichOVKIPo_301.send_message import VkSendMessageIntegration
+from app.integrations.vk_shinkevichOVKIPo_301.send_photo import VkSendPhotoIntegration
+from app.integrations.vk_shinkevichOVKIPo_301.get_user import VkGetUserInfoIntegration
 from app.auth.credentials_resolver import CredentialsResolver
 from app.loggers.bot import BotLogger
 

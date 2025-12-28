@@ -13,7 +13,7 @@ class VkSendPhotoIntegration(BaseIntegration):
     @property
     def metadata(self) -> IntegrationMetadata:
         return IntegrationMetadata(
-            id="vk_send_photo",
+            id="vk_send_photo_shinkevichOVKIPo_301",
             version="1.0.0",
             name="VK Send Photo",
             description="Загрузка и отправка фотографии пользователю ВКонтакте",

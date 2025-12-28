@@ -11,7 +11,7 @@ class VkGetUserInfoIntegration(BaseIntegration):
     @property
     def metadata(self) -> IntegrationMetadata:
         return IntegrationMetadata(
-            id="vk_get_user_info_shinkevichOVKIPo_301",
+            id="vk_get_user_info",
             version="1.0.0",
             name="VK Get User Info",
             description="Получение информации о пользователе ВКонтакте (Имя, Фамилия, Город)",

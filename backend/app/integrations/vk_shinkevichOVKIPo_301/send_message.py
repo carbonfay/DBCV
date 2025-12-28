@@ -12,7 +12,7 @@ class VkSendMessageIntegration(BaseIntegration):
     @property
     def metadata(self) -> IntegrationMetadata:
         return IntegrationMetadata(
-            id="vk_send_message_shinkevichOVKIPo_301",
+            id="vk_send_message",
             version="1.0.0",
             name="VK Send Message",
             description="Отправка текстового сообщения пользователю ВКонтакте",
