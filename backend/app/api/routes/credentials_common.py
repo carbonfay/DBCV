@@ -121,6 +121,17 @@ def _get_all_providers() -> List[ProviderInfo]:
             }
         ),
         ProviderInfo(
+            value="vk",
+            label="VKontakte",
+            description="VK API (ВКонтакте)",
+            supported_strategies=["api_key"],
+            payload_examples={
+                "api_key": {
+                    "token": "vk1.a.YOUR_TOKEN_HERE"
+                }
+            }
+        ),
+        ProviderInfo(
             value="other",
             label="Другое",
             description="Другой провайдер",

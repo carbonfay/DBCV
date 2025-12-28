@@ -1,0 +1,72 @@
+import httpx
+import random
+
+from app.integrations.base import BaseIntegration
+from app.integrations.types import (
+    IntegrationMetadata,
+    IntegrationContext,
+    IntegrationResult,
+)
+from app.services.credentials_resolver import CredentialsResolver
+
+
+class VkSendMessageIntegration(BaseIntegration):
+
+    @property
+    def metadata(self) -> IntegrationMetadata:
+        return IntegrationMetadata(
+            id="vk_send_message",
+            name="VK Send Message",
+            description="Send message to VK user",
+            category="social",
+            provider="vk",
+            credentials_strategy="api_key",
+            version="1.0.0",
+            config_schema={
+                "type": "object",
+                "properties": {
+                    "user_id": {
+                        "type": "integer",
+                        "description": "VK user id"
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Message text"
+                    }
+                },
+                "required": ["user_id", "message"]
+            },
+            outputs_schema={"type": "object"},
+        )
+
+    async def execute(self, context: IntegrationContext) -> IntegrationResult:
+        credentials = CredentialsResolver.get_default_for(
+            provider="vk",
+            strategy="api_key",
+            credentials=context.credentials
+        )
+
+        token = credentials.payload.get("access_token")
+        if not token:
+            return IntegrationResult(success=False, error="Missing access_token")
+
+        params = {
+            "access_token": token,
+            "v": "5.131",
+            "user_id": context.config["user_id"],
+            "message": context.config["message"],
+            "random_id": random.randint(1, 10**9)
+        }
+
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.post(
+                "https://api.vk.com/method/messages.send",
+                params=params
+            )
+
+        data = response.json()
+
+        if "error" in data:
+            return IntegrationResult(success=False, error=str(data["error"]), data=data)
+
+        return IntegrationResult(success=True, data=data)
