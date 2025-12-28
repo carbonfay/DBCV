@@ -15,3 +15,9 @@ except ImportError:
 
 # Внутренние интеграции DBCV
 from app.integrations.dbcv import *  # noqa: F401, F403
+
+# --- VK (Shinkevich) ---
+try:
+    from app.integrations.vk_shinkevich_ovkipo_301 import *
+except ImportError:
+    pass
