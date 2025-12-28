@@ -17,6 +17,7 @@ class Provider(str, Enum):
     discord = "discord"
     openai = "openai"
     moodle = "moodle"
+    medicine = "medicine"
     other = "other"
 
 
