@@ -19,7 +19,7 @@ class SqlAttachmentRepository(AttachmentRepository):
                 row = (await conn.execute(text(
                     """
                     INSERT INTO attachment (id, content_type, file, message_id, created_at, updated_at)
-                    VALUES (:id, :content_type, :file, :message_id, NOW(), NOW())
+                    VALUES (:id, :content_type, :file, :message_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                     RETURNING id, content_type, file
                     """
                 ), {"id": attachment_id, "content_type": content_type, "file": key, "message_id": message_id})).mappings().first()
@@ -29,7 +29,7 @@ class SqlAttachmentRepository(AttachmentRepository):
             row = (await conn.execute(text(
                 """
                 INSERT INTO attachment (id, content_type, file, message_id, created_at, updated_at)
-                VALUES (:id, :content_type, :file, :message_id, NOW(), NOW())
+                VALUES (:id, :content_type, :file, :message_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 RETURNING id, content_type, file
                 """
             ), {"id": attachment_id, "content_type": content_type, "file": key, "message_id": message_id})).mappings().first()
@@ -52,5 +52,4 @@ class SqlAttachmentRepository(AttachmentRepository):
             return None
         data = dict(row)
         return AttachmentMeta(id=data["id"], content_type=data.get("content_type"), key=data.get("file"))
-
 

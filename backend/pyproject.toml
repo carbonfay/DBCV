@@ -16,3 +16,13 @@ multi_line_output=3
 include_trailing_comma = true
 force_grid_wrap=0
 use_parentheses = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+filterwarnings = [
+    "ignore:Please use `import python_multipart` instead\\.:PendingDeprecationWarning",
+    "ignore:Support for class-based `config` is deprecated.*:DeprecationWarning",
+    "ignore:`json_encoders` is deprecated.*:DeprecationWarning",
+]

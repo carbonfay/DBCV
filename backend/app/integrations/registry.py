@@ -3,6 +3,26 @@ from typing import Dict, List, Optional, Tuple
 from .base import BaseIntegration, IntegrationMetadata
 
 
+class IntegrationProxy(BaseIntegration):
+    """Обертка, позволяющая вернуть интеграцию с актуальной версией метаданных."""
+
+    def __init__(self, inner: BaseIntegration, version_override: str):
+        self._inner = inner
+        self._version_override = version_override
+
+    @property
+    def metadata(self) -> IntegrationMetadata:
+        md = self._inner.metadata
+        try:
+            md.version = self._version_override
+        except Exception:
+            pass
+        return md
+
+    async def execute(self, config, credentials_resolver, bot_id, logger):
+        return await self._inner.execute(config, credentials_resolver, bot_id, logger)
+
+
 class IntegrationRegistry:
     """Реестр всех доступных интеграций с версионированием."""
     
@@ -22,6 +42,11 @@ class IntegrationRegistry:
         """
         metadata = integration.metadata
         version = version or metadata.version
+        # Обновляем версию в метадате для корректной отдачи latest
+        try:
+            metadata.version = version  # type: ignore[misc]
+        except Exception:
+            pass
         key = (metadata.id, version)
         self._integrations[key] = integration
         
@@ -50,11 +75,16 @@ class IntegrationRegistry:
             Экземпляр интеграции или None
         """
         if version:
-            return self._integrations.get((integration_id, version))
+            integration = self._integrations.get((integration_id, version))
+            if integration:
+                return IntegrationProxy(integration, version)
+            return None
         # Возвращаем последнюю версию
         latest_version = self._latest_versions.get(integration_id)
         if latest_version:
-            return self._integrations.get((integration_id, latest_version))
+            integration = self._integrations.get((integration_id, latest_version))
+            if integration:
+                return IntegrationProxy(integration, latest_version)
         return None
     
     def list_all(self, latest_only: bool = True) -> List[IntegrationMetadata]:
@@ -99,4 +129,3 @@ class IntegrationRegistry:
 
 # Глобальный реестр
 registry = IntegrationRegistry()
-

@@ -21,7 +21,7 @@ PasswordMismatchException = HTTPException(status_code=status.HTTP_409_CONFLICT, 
 IncorrectEmailOrPasswordException = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                                                   detail='Неверная почта или пароль')
 
-IncorrectUsernameOrPasswordException = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+IncorrectUsernameOrPasswordException = HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                                                   detail='Неверный логин или пароль')
 
 NoJwtException = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,

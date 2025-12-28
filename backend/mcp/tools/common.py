@@ -7,7 +7,7 @@ from typing import Iterable, Optional, Set
 
 from mcp.types import CallToolResult, TextContent
 
-from client import DBCVAPIClient
+from mcp.client import DBCVAPIClient
 
 # Roles that are allowed to execute privileged MCP tools by default.
 DEFAULT_ALLOWED_ROLES: Set[str] = {"DEVELOPER", "ADMIN"}

@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-from config import config
+from mcp.config import config
 from server import dbcv_server
 
 
