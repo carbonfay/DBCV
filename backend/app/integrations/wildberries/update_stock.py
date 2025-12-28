@@ -2,6 +2,7 @@
 from typing import Dict, Any, List
 from uuid import UUID
 import json
+import asyncio
 from datetime import datetime
 
 from app.integrations.base import BaseIntegration, IntegrationMetadata
@@ -34,7 +35,7 @@ class WildberriesUpdateStockIntegration(BaseIntegration):
         return IntegrationMetadata(
             # Базовые идентификаторы
             id="wildberries_update_stock",
-            version="2.0.0",  # Обновили версию для API v2
+            version="2.0.0",
             name="Wildberries Update Stock",
             description="Обновление остатков товаров на маркетплейсе Wildberries (API v2)",
             
@@ -59,29 +60,17 @@ class WildberriesUpdateStockIntegration(BaseIntegration):
                                 "barcode": {
                                     "type": "string",
                                     "title": "Баркод/SKU товара",
-                                    "description": "Штрихкод или артикул товара (например, '2001234567890')"
+                                    "description": "Штрихкод или артикул товара (например, 'ART1234567890')"
                                 },
                                 "stock": {
                                     "type": "integer",
                                     "title": "Количество",
                                     "description": "Количество доступных единиц товара",
                                     "minimum": 0
-                                },
-                                "warehouse_id": {
-                                    "type": "integer",
-                                    "title": "ID склада",
-                                    "description": "Идентификатор склада поставщика (опционально, используется в некоторых API)"
                                 }
                             }
                         },
                         "minItems": 1
-                    },
-                    "api_base": {
-                        "type": "string",
-                        "title": "База API",
-                        "description": "Выбор API для использования",
-                        "enum": ["marketplace", "content", "supplier"],
-                        "default": "marketplace"
                     },
                     "chunk_size": {
                         "type": "integer",
@@ -95,7 +84,7 @@ class WildberriesUpdateStockIntegration(BaseIntegration):
             },
             
             # НАСТРОЙКИ АВТОРИЗАЦИИ
-            credentials_provider="other",
+            credentials_provider="other",  # Изменено с "wildberries" на "other"
             credentials_strategy="api_key",
             library_name="httpx>=0.27.0" if HTTPX_AVAILABLE else None,
             
@@ -104,7 +93,6 @@ class WildberriesUpdateStockIntegration(BaseIntegration):
                 {
                     "title": "Обновление остатка для одного товара",
                     "config": {
-                        "api_base": "marketplace",
                         "stocks": [
                             {
                                 "barcode": "ART1234567890",
@@ -117,7 +105,6 @@ class WildberriesUpdateStockIntegration(BaseIntegration):
                 {
                     "title": "Обновление остатков для нескольких товаров",
                     "config": {
-                        "api_base": "marketplace",
                         "chunk_size": 50,
                         "stocks": [
                             {"barcode": "ART001", "stock": 25},
@@ -127,19 +114,6 @@ class WildberriesUpdateStockIntegration(BaseIntegration):
                         ]
                     },
                     "description": "Обновление остатков для нескольких товаров чанками по 50"
-                },
-                {
-                    "title": "Обнуление остатков через Content API",
-                    "config": {
-                        "api_base": "content",
-                        "stocks": [
-                            {
-                                "barcode": "ART1234567890",
-                                "stock": 0
-                            }
-                        ]
-                    },
-                    "description": "Обнуление остатков товара через Content API"
                 }
             ]
         )
@@ -172,9 +146,10 @@ class WildberriesUpdateStockIntegration(BaseIntegration):
             }
         
         # ========== ШАГ 2: ПОЛУЧЕНИЕ API КЛЮЧА ==========
+        # Изменено: provider="other" вместо "wildberries"
         creds = await credentials_resolver.get_default_for(
             bot_id=bot_id,
-            provider="other",
+            provider="other",  # Изменено!
             strategy="api_key"
         )
         
@@ -215,7 +190,6 @@ class WildberriesUpdateStockIntegration(BaseIntegration):
         
         # ========== ШАГ 3: ПОЛУЧЕНИЕ И ВАЛИДАЦИЯ ПАРАМЕТРОВ ==========
         stocks = config.get("stocks", [])
-        api_base = config.get("api_base", "marketplace")
         chunk_size = min(max(config.get("chunk_size", 100), 1), 1000)  # Ограничение 1-1000
         
         if not stocks:
@@ -280,14 +254,6 @@ class WildberriesUpdateStockIntegration(BaseIntegration):
                 "stock": stock
             }
             
-            # warehouse_id может понадобиться для других API
-            warehouse_id = stock_item.get("warehouse_id")
-            if warehouse_id is not None:
-                if isinstance(warehouse_id, int) and warehouse_id > 0:
-                    validated_item["warehouse_id"] = warehouse_id
-                else:
-                    await logger.warning(f"Invalid warehouse_id at index {i}, ignoring")
-            
             validated_stocks.append(validated_item)
         
         await logger.info(f"Validated {len(validated_stocks)} stock items for update")
@@ -318,16 +284,10 @@ class WildberriesUpdateStockIntegration(BaseIntegration):
         Авторизация: простой токен без "Bearer"
         """
         
-        # Выбираем URL в зависимости от выбранного API
-        api_urls = {
-            "marketplace": "https://marketplace-api.wildberries.ru/api/v2/stocks",
-            "content": "https://content-api.wildberries.ru/api/v2/stocks",
-            "supplier": "https://supplier-api.wildberries.ru/api/v2/stocks"
-        }
+        # Используем только Marketplace API (упрощено)
+        url = "https://marketplace-api.wildberries.ru/api/v2/stocks"
         
-        url = api_urls.get(api_base, api_urls["marketplace"])
-        
-        await logger.info(f"Using {api_base} API: {url}")
+        await logger.info(f"Using Marketplace API: {url}")
         
         # Заголовки запроса (ВАЖНО: без "Bearer"!)
         headers = {
@@ -339,7 +299,7 @@ class WildberriesUpdateStockIntegration(BaseIntegration):
         
         all_results = {
             "timestamp": datetime.now().isoformat(),
-            "api_used": api_base,
+            "api_used": "marketplace",
             "url": url,
             "total_items": len(validated_stocks),
             "chunks_sent": len(chunks),
@@ -369,7 +329,7 @@ class WildberriesUpdateStockIntegration(BaseIntegration):
                         # Асинхронный HTTP POST запрос
                         response = await client.post(
                             url,
-                            json=wb_stocks_data,  # API v2 формат
+                            json=wb_stocks_data,
                             headers=headers
                         )
                         
@@ -483,18 +443,11 @@ class WildberriesUpdateStockIntegration(BaseIntegration):
             return 0
         
         # Формат ответа 207 может варьироваться
-        # Ищем массивы с результатами
         success_count = 0
         
         if "stocks" in response_data and isinstance(response_data["stocks"], list):
             # Формат: {"stocks": [{"sku": "...", "amount": ..., "updated": true/false}]}
             for item in response_data["stocks"]:
-                if isinstance(item, dict) and item.get("updated") is True:
-                    success_count += 1
-        
-        elif isinstance(response_data, list):
-            # Формат: [{"sku": "...", "amount": ..., "updated": true/false}]
-            for item in response_data:
                 if isinstance(item, dict) and item.get("updated") is True:
                     success_count += 1
         
@@ -536,10 +489,10 @@ class WildberriesUpdateStockIntegration(BaseIntegration):
             401: "Неверный или отсутствующий API ключ",
             403: "Доступ запрещен. Проверьте права API ключа",
             404: "Запрошенный ресурс не найден",
-            409: "Конфликт данных (например, дублирование)",
+            409: "Конфликт данных",
             413: "Слишком большой запрос",
             422: "Неверный формат данных",
-            429: "Превышен лимит запросов к Wildberries API",
+            429: "Превышен лимит запросов",
             500: "Внутренняя ошибка сервера Wildberries",
             502: "Плохой шлюз",
             503: "Сервис временно недоступен",
@@ -554,19 +507,10 @@ class WildberriesUpdateStockIntegration(BaseIntegration):
                 
                 if isinstance(error_data, dict):
                     # Wildberries API v2 формат ошибок
-                    error_fields = [
-                        error_data.get("detail"),
-                        error_data.get("title"),
-                        error_data.get("message"),
-                        error_data.get("errorText"),
-                        error_data.get("error")
-                    ]
+                    for field in ["detail", "title", "message", "errorText", "error"]:
+                        if error_data.get(field):
+                            return f"{status_messages.get(response.status_code, default_message)}: {error_data[field]}"
                     
-                    for field in error_fields:
-                        if field:
-                            return f"{status_messages.get(response.status_code, default_message)}: {field}"
-                    
-                    # Проверяем вложенные ошибки
                     if "errors" in error_data and error_data["errors"]:
                         if isinstance(error_data["errors"], list) and error_data["errors"]:
                             first_error = error_data["errors"][0]
@@ -577,11 +521,8 @@ class WildberriesUpdateStockIntegration(BaseIntegration):
                 elif isinstance(error_data, str):
                     return f"{status_messages.get(response.status_code, default_message)}: {error_data}"
                     
-            except json.JSONDecodeError:
-                # Если не JSON, возвращаем текст
+            except:
                 if response.text and len(response.text) < 500:
                     return f"{status_messages.get(response.status_code, default_message)}: {response.text}"
-            except Exception:
-                pass
         
         return status_messages.get(response.status_code, default_message)
