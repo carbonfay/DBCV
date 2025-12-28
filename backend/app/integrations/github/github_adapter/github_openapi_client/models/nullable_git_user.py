@@ -17,27 +17,20 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
+from datetime import datetime
+from pydantic import BaseModel, ConfigDict, Field, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
 from typing import Optional, Set
 from typing_extensions import Self
 
-class SecurityAndAnalysisDependabotSecurityUpdates(BaseModel):
+class NullableGitUser(BaseModel):
     """
-    Enable or disable Dependabot security updates for the repository.
+    Metaproperties for Git author/committer information.
     """ # noqa: E501
-    status: Optional[StrictStr] = Field(default=None, description="The enablement status of Dependabot security updates for the repository.")
-    __properties: ClassVar[List[str]] = ["status"]
-
-    @field_validator('status')
-    def status_validate_enum(cls, value):
-        """Validates the enum"""
-        if value is None:
-            return value
-
-        if value not in set(['enabled', 'disabled']):
-            raise ValueError("must be one of enum values ('enabled', 'disabled')")
-        return value
+    name: Optional[StrictStr] = None
+    email: Optional[StrictStr] = None
+    var_date: Optional[datetime] = Field(default=None, alias="date")
+    __properties: ClassVar[List[str]] = ["name", "email", "date"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -57,7 +50,7 @@ class SecurityAndAnalysisDependabotSecurityUpdates(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of SecurityAndAnalysisDependabotSecurityUpdates from a JSON string"""
+        """Create an instance of NullableGitUser from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -82,7 +75,7 @@ class SecurityAndAnalysisDependabotSecurityUpdates(BaseModel):
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of SecurityAndAnalysisDependabotSecurityUpdates from a dict"""
+        """Create an instance of NullableGitUser from a dict"""
         if obj is None:
             return None
 
@@ -90,7 +83,9 @@ class SecurityAndAnalysisDependabotSecurityUpdates(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "status": obj.get("status")
+            "name": obj.get("name"),
+            "email": obj.get("email"),
+            "date": obj.get("date")
         })
         return _obj
 

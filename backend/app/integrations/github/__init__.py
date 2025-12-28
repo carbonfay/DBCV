@@ -1,8 +1,8 @@
-from app.integrations.github.get_repository import GitHubGetRepositoryIntegration
+from app.integrations.github.list_commits import GitHubListCommitsIntegration
 from app.integrations.registry import registry
 
-registry.register(GitHubGetRepositoryIntegration())
+registry.register(GitHubListCommitsIntegration())
 
 __all__ = [
-    "GitHubGetRepositoryIntegration",
+    "GitHubListCommitsIntegration",
 ]

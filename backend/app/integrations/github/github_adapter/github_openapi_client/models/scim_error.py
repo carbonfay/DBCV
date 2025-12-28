@@ -17,20 +17,22 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, StrictStr
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
 from typing import Optional, Set
 from typing_extensions import Self
 
-class CodeOfConductSimple(BaseModel):
+class ScimError(BaseModel):
     """
-    Code of Conduct Simple
+    Scim Error
     """ # noqa: E501
-    url: StrictStr
-    key: StrictStr
-    name: StrictStr
-    html_url: Optional[StrictStr]
-    __properties: ClassVar[List[str]] = ["url", "key", "name", "html_url"]
+    message: Optional[StrictStr] = None
+    documentation_url: Optional[StrictStr] = None
+    detail: Optional[StrictStr] = None
+    status: Optional[StrictInt] = None
+    scim_type: Optional[StrictStr] = Field(default=None, alias="scimType")
+    schemas: Optional[List[StrictStr]] = None
+    __properties: ClassVar[List[str]] = ["message", "documentation_url", "detail", "status", "scimType", "schemas"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -50,7 +52,7 @@ class CodeOfConductSimple(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of CodeOfConductSimple from a JSON string"""
+        """Create an instance of ScimError from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -71,16 +73,31 @@ class CodeOfConductSimple(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # set to None if html_url (nullable) is None
+        # set to None if message (nullable) is None
         # and model_fields_set contains the field
-        if self.html_url is None and "html_url" in self.model_fields_set:
-            _dict['html_url'] = None
+        if self.message is None and "message" in self.model_fields_set:
+            _dict['message'] = None
+
+        # set to None if documentation_url (nullable) is None
+        # and model_fields_set contains the field
+        if self.documentation_url is None and "documentation_url" in self.model_fields_set:
+            _dict['documentation_url'] = None
+
+        # set to None if detail (nullable) is None
+        # and model_fields_set contains the field
+        if self.detail is None and "detail" in self.model_fields_set:
+            _dict['detail'] = None
+
+        # set to None if scim_type (nullable) is None
+        # and model_fields_set contains the field
+        if self.scim_type is None and "scim_type" in self.model_fields_set:
+            _dict['scimType'] = None
 
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of CodeOfConductSimple from a dict"""
+        """Create an instance of ScimError from a dict"""
         if obj is None:
             return None
 
@@ -88,10 +105,12 @@ class CodeOfConductSimple(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "url": obj.get("url"),
-            "key": obj.get("key"),
-            "name": obj.get("name"),
-            "html_url": obj.get("html_url")
+            "message": obj.get("message"),
+            "documentation_url": obj.get("documentation_url"),
+            "detail": obj.get("detail"),
+            "status": obj.get("status"),
+            "scimType": obj.get("scimType"),
+            "schemas": obj.get("schemas")
         })
         return _obj
 

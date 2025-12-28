@@ -17,27 +17,21 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, StrictStr, field_validator
+from pydantic import BaseModel, ConfigDict, StrictBool, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
 from typing import Optional, Set
 from typing_extensions import Self
 
-class SecurityAndAnalysisCodeSecurity(BaseModel):
+class Verification(BaseModel):
     """
-    SecurityAndAnalysisCodeSecurity
+    Verification
     """ # noqa: E501
-    status: Optional[StrictStr] = None
-    __properties: ClassVar[List[str]] = ["status"]
-
-    @field_validator('status')
-    def status_validate_enum(cls, value):
-        """Validates the enum"""
-        if value is None:
-            return value
-
-        if value not in set(['enabled', 'disabled']):
-            raise ValueError("must be one of enum values ('enabled', 'disabled')")
-        return value
+    verified: StrictBool
+    reason: StrictStr
+    payload: Optional[StrictStr]
+    signature: Optional[StrictStr]
+    verified_at: Optional[StrictStr]
+    __properties: ClassVar[List[str]] = ["verified", "reason", "payload", "signature", "verified_at"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -57,7 +51,7 @@ class SecurityAndAnalysisCodeSecurity(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of SecurityAndAnalysisCodeSecurity from a JSON string"""
+        """Create an instance of Verification from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -78,11 +72,26 @@ class SecurityAndAnalysisCodeSecurity(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
+        # set to None if payload (nullable) is None
+        # and model_fields_set contains the field
+        if self.payload is None and "payload" in self.model_fields_set:
+            _dict['payload'] = None
+
+        # set to None if signature (nullable) is None
+        # and model_fields_set contains the field
+        if self.signature is None and "signature" in self.model_fields_set:
+            _dict['signature'] = None
+
+        # set to None if verified_at (nullable) is None
+        # and model_fields_set contains the field
+        if self.verified_at is None and "verified_at" in self.model_fields_set:
+            _dict['verified_at'] = None
+
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of SecurityAndAnalysisCodeSecurity from a dict"""
+        """Create an instance of Verification from a dict"""
         if obj is None:
             return None
 
@@ -90,7 +99,11 @@ class SecurityAndAnalysisCodeSecurity(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "status": obj.get("status")
+            "verified": obj.get("verified"),
+            "reason": obj.get("reason"),
+            "payload": obj.get("payload"),
+            "signature": obj.get("signature"),
+            "verified_at": obj.get("verified_at")
         })
         return _obj
 

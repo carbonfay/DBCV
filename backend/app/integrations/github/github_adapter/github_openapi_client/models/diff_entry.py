@@ -17,26 +17,33 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, StrictStr, field_validator
+from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr, field_validator
 from typing import Any, ClassVar, Dict, List, Optional
 from typing import Optional, Set
 from typing_extensions import Self
 
-class SecurityAndAnalysisAdvancedSecurity(BaseModel):
+class DiffEntry(BaseModel):
     """
-    Enable or disable GitHub Advanced Security for the repository.  For standalone Code Scanning or Secret Protection products, this parameter cannot be used. 
+    Diff Entry
     """ # noqa: E501
-    status: Optional[StrictStr] = None
-    __properties: ClassVar[List[str]] = ["status"]
+    sha: Optional[StrictStr]
+    filename: StrictStr
+    status: StrictStr
+    additions: StrictInt
+    deletions: StrictInt
+    changes: StrictInt
+    blob_url: StrictStr
+    raw_url: StrictStr
+    contents_url: StrictStr
+    patch: Optional[StrictStr] = None
+    previous_filename: Optional[StrictStr] = None
+    __properties: ClassVar[List[str]] = ["sha", "filename", "status", "additions", "deletions", "changes", "blob_url", "raw_url", "contents_url", "patch", "previous_filename"]
 
     @field_validator('status')
     def status_validate_enum(cls, value):
         """Validates the enum"""
-        if value is None:
-            return value
-
-        if value not in set(['enabled', 'disabled']):
-            raise ValueError("must be one of enum values ('enabled', 'disabled')")
+        if value not in set(['added', 'removed', 'modified', 'renamed', 'copied', 'changed', 'unchanged']):
+            raise ValueError("must be one of enum values ('added', 'removed', 'modified', 'renamed', 'copied', 'changed', 'unchanged')")
         return value
 
     model_config = ConfigDict(
@@ -57,7 +64,7 @@ class SecurityAndAnalysisAdvancedSecurity(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of SecurityAndAnalysisAdvancedSecurity from a JSON string"""
+        """Create an instance of DiffEntry from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -78,11 +85,16 @@ class SecurityAndAnalysisAdvancedSecurity(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
+        # set to None if sha (nullable) is None
+        # and model_fields_set contains the field
+        if self.sha is None and "sha" in self.model_fields_set:
+            _dict['sha'] = None
+
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of SecurityAndAnalysisAdvancedSecurity from a dict"""
+        """Create an instance of DiffEntry from a dict"""
         if obj is None:
             return None
 
@@ -90,7 +102,17 @@ class SecurityAndAnalysisAdvancedSecurity(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "status": obj.get("status")
+            "sha": obj.get("sha"),
+            "filename": obj.get("filename"),
+            "status": obj.get("status"),
+            "additions": obj.get("additions"),
+            "deletions": obj.get("deletions"),
+            "changes": obj.get("changes"),
+            "blob_url": obj.get("blob_url"),
+            "raw_url": obj.get("raw_url"),
+            "contents_url": obj.get("contents_url"),
+            "patch": obj.get("patch"),
+            "previous_filename": obj.get("previous_filename")
         })
         return _obj
 

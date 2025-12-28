@@ -31,13 +31,17 @@ __all__ = [
     "AuthorAssociation",
     "AutoMerge",
     "BasicError",
-    "CodeOfConductSimple",
-    "FullRepository",
-    "FullRepositoryPermissions",
+    "Commit",
+    "CommitAuthor",
+    "CommitCommit",
+    "CommitCommitTree",
+    "CommitParentsInner",
+    "CommitStats",
+    "DiffEntry",
     "Link",
+    "NullableGitUser",
     "NullableLicenseSimple",
     "NullableMilestone",
-    "NullableRepository",
     "NullableSimpleUser",
     "PullRequest",
     "PullRequestHead",
@@ -50,12 +54,10 @@ __all__ = [
     "RulesetVersion",
     "RulesetVersionActor",
     "RulesetVersionWithState",
-    "SecurityAndAnalysis",
-    "SecurityAndAnalysisAdvancedSecurity",
-    "SecurityAndAnalysisCodeSecurity",
-    "SecurityAndAnalysisDependabotSecurityUpdates",
+    "ScimError",
     "SimpleUser",
     "TeamSimple",
+    "Verification",
 ]
 
 # import apis into sdk package
@@ -76,13 +78,17 @@ from github_openapi_client.exceptions import ApiException as ApiException
 from github_openapi_client.models.author_association import AuthorAssociation as AuthorAssociation
 from github_openapi_client.models.auto_merge import AutoMerge as AutoMerge
 from github_openapi_client.models.basic_error import BasicError as BasicError
-from github_openapi_client.models.code_of_conduct_simple import CodeOfConductSimple as CodeOfConductSimple
-from github_openapi_client.models.full_repository import FullRepository as FullRepository
-from github_openapi_client.models.full_repository_permissions import FullRepositoryPermissions as FullRepositoryPermissions
+from github_openapi_client.models.commit import Commit as Commit
+from github_openapi_client.models.commit_author import CommitAuthor as CommitAuthor
+from github_openapi_client.models.commit_commit import CommitCommit as CommitCommit
+from github_openapi_client.models.commit_commit_tree import CommitCommitTree as CommitCommitTree
+from github_openapi_client.models.commit_parents_inner import CommitParentsInner as CommitParentsInner
+from github_openapi_client.models.commit_stats import CommitStats as CommitStats
+from github_openapi_client.models.diff_entry import DiffEntry as DiffEntry
 from github_openapi_client.models.link import Link as Link
+from github_openapi_client.models.nullable_git_user import NullableGitUser as NullableGitUser
 from github_openapi_client.models.nullable_license_simple import NullableLicenseSimple as NullableLicenseSimple
 from github_openapi_client.models.nullable_milestone import NullableMilestone as NullableMilestone
-from github_openapi_client.models.nullable_repository import NullableRepository as NullableRepository
 from github_openapi_client.models.nullable_simple_user import NullableSimpleUser as NullableSimpleUser
 from github_openapi_client.models.pull_request import PullRequest as PullRequest
 from github_openapi_client.models.pull_request_head import PullRequestHead as PullRequestHead
@@ -95,10 +101,8 @@ from github_openapi_client.models.repository_permissions import RepositoryPermis
 from github_openapi_client.models.ruleset_version import RulesetVersion as RulesetVersion
 from github_openapi_client.models.ruleset_version_actor import RulesetVersionActor as RulesetVersionActor
 from github_openapi_client.models.ruleset_version_with_state import RulesetVersionWithState as RulesetVersionWithState
-from github_openapi_client.models.security_and_analysis import SecurityAndAnalysis as SecurityAndAnalysis
-from github_openapi_client.models.security_and_analysis_advanced_security import SecurityAndAnalysisAdvancedSecurity as SecurityAndAnalysisAdvancedSecurity
-from github_openapi_client.models.security_and_analysis_code_security import SecurityAndAnalysisCodeSecurity as SecurityAndAnalysisCodeSecurity
-from github_openapi_client.models.security_and_analysis_dependabot_security_updates import SecurityAndAnalysisDependabotSecurityUpdates as SecurityAndAnalysisDependabotSecurityUpdates
+from github_openapi_client.models.scim_error import ScimError as ScimError
 from github_openapi_client.models.simple_user import SimpleUser as SimpleUser
 from github_openapi_client.models.team_simple import TeamSimple as TeamSimple
+from github_openapi_client.models.verification import Verification as Verification
 

@@ -512,11 +512,7 @@ class Configuration:
         return [
             {
                 'url': "https://api.github.com",
-                'description': "GitHub public API",
-            },
-            {
-                'url': "http://localhost:8081",
-                'description': "Local proxy (dev)",
+                'description': "No description provided",
             }
         ]
 

@@ -17,21 +17,19 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, StrictBool
+from pydantic import BaseModel, ConfigDict, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
 from typing import Optional, Set
 from typing_extensions import Self
 
-class FullRepositoryPermissions(BaseModel):
+class CommitParentsInner(BaseModel):
     """
-    FullRepositoryPermissions
+    CommitParentsInner
     """ # noqa: E501
-    admin: StrictBool
-    maintain: Optional[StrictBool] = None
-    push: StrictBool
-    triage: Optional[StrictBool] = None
-    pull: StrictBool
-    __properties: ClassVar[List[str]] = ["admin", "maintain", "push", "triage", "pull"]
+    sha: StrictStr
+    url: StrictStr
+    html_url: Optional[StrictStr] = None
+    __properties: ClassVar[List[str]] = ["sha", "url", "html_url"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -51,7 +49,7 @@ class FullRepositoryPermissions(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of FullRepositoryPermissions from a JSON string"""
+        """Create an instance of CommitParentsInner from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -76,7 +74,7 @@ class FullRepositoryPermissions(BaseModel):
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of FullRepositoryPermissions from a dict"""
+        """Create an instance of CommitParentsInner from a dict"""
         if obj is None:
             return None
 
@@ -84,11 +82,9 @@ class FullRepositoryPermissions(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "admin": obj.get("admin"),
-            "maintain": obj.get("maintain"),
-            "push": obj.get("push"),
-            "triage": obj.get("triage"),
-            "pull": obj.get("pull")
+            "sha": obj.get("sha"),
+            "url": obj.get("url"),
+            "html_url": obj.get("html_url")
         })
         return _obj
 

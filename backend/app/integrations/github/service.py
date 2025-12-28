@@ -1,14 +1,17 @@
+# app/integrations/github/service.py (update only the list_commits method)
 from __future__ import annotations
 
 import os
 import threading
 from dataclasses import dataclass
-from typing import Optional
+from datetime import datetime
+from typing import Optional, List
 
 from app.integrations.github.github_adapter.github_openapi_client.api.repos_api import ReposApi
 from app.integrations.github.github_adapter.github_openapi_client.api_client import ApiClient
 from app.integrations.github.github_adapter.github_openapi_client.configuration import Configuration
-from app.integrations.github.github_adapter.github_openapi_client.models.full_repository import FullRepository
+from app.integrations.github.github_adapter.github_openapi_client.models.commit import Commit
+
 
 @dataclass(frozen=True)
 class GitHubClientSettings:
@@ -20,7 +23,6 @@ def _build_configuration(*, token: str, settings: GitHubClientSettings) -> Confi
     cfg = Configuration(host=settings.host)
     cfg.retries = settings.retries
     cfg.access_token = token
-
     return cfg
 
 
@@ -31,9 +33,34 @@ class GitHubService:
     def _api_client(self, *, token: str) -> ApiClient:
         return ApiClient(_build_configuration(token=token, settings=self._settings))
 
-    async def get_repository(self, *, token: str, owner: str, repo: str) -> FullRepository:
+    async def list_commits(
+        self,
+        *,
+        token: str,
+        owner: str,
+        repo: str,
+        sha: Optional[str] = None,
+        path: Optional[str] = None,
+        author: Optional[str] = None,
+        committer: Optional[str] = None,
+        since: Optional[datetime] = None,
+        until: Optional[datetime] = None,
+        per_page: Optional[int] = None,
+        page: Optional[int] = None,
+    ) -> List[Commit]:
         async with self._api_client(token=token) as api_client:
-            return await ReposApi(api_client).repos_get(owner, repo)
+            return await ReposApi(api_client).repos_list_commits(
+                owner,
+                repo,
+                sha=sha,
+                path=path,
+                author=author,
+                committer=committer,
+                since=since,
+                until=until,
+                per_page=per_page,
+                page=page,
+            )
 
 
 _service_lock = threading.Lock()
