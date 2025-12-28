@@ -8,3 +8,10 @@ except ImportError:
 
 # Внутренние интеграции DBCV
 from app.integrations.dbcv import *  # noqa: F401, F403
+
+# Moodle интеграции
+try:
+    from app.integrations.moodle import *  # noqa: F401, F403
+except ImportError:
+    # Библиотека не установлена, пропускаем
+    pass
