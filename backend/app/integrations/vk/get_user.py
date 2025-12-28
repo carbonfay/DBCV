@@ -55,9 +55,16 @@ class VkGetUserInfoIntegration(BaseIntegration):
         if not creds:
             return {"response": {"ok": False, "error_code": 401, "description": "Credentials for VK not found"}}
 
-        token = creds.get("token") or creds.get("api_key")
+        # === УНИВЕРСАЛЬНОЕ ПОЛУЧЕНИЕ ТОКЕНА ===
+        payload = creds.get("payload") or {}
+        token = payload.get("token") or payload.get("api_key")
+        
+        if not token:
+            token = creds.get("token") or creds.get("api_key")
+
         if not token:
              return {"response": {"ok": False, "error_code": 401, "description": "Token not found"}}
+        # =======================================
 
         user_id_to_find = config.get("user_id")
 
@@ -76,14 +83,13 @@ class VkGetUserInfoIntegration(BaseIntegration):
 
             user_info = users[0]
             
-            # Парсим данные как в вашем боте
+            # Парсим данные
             first_name = user_info.get("first_name", "Неизвестно")
             last_name = user_info.get("last_name", "Неизвестно")
             
             city_data = user_info.get("city")
             city_title = city_data.get("title") if isinstance(city_data, dict) else "Не указан"
 
-            # Формируем красивый текст
             formatted_text = (
                 f"👤 Имя: {first_name}\n"
                 f"👤 Фамилия: {last_name}\n"

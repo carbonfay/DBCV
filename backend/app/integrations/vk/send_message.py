@@ -18,7 +18,7 @@ class VkSendMessageIntegration(BaseIntegration):
             description="Отправка текстового сообщения пользователю ВКонтакте",
             category="messaging",
             icon_s3_key="icons/integrations/vk.svg",
-            color="#0077FF",  # <--- ДОБАВИЛ ЭТУ СТРОКУ
+            color="#0077FF",
             credentials_provider="vk",
             credentials_strategy="api_key",
             library_name="vk_api",
@@ -64,9 +64,17 @@ class VkSendMessageIntegration(BaseIntegration):
         if not creds:
             return {"response": {"ok": False, "error_code": 401, "description": "Credentials for VK not found"}}
 
-        token = creds.get("token") or creds.get("api_key")
+        # === УНИВЕРСАЛЬНОЕ ПОЛУЧЕНИЕ ТОКЕНА ===
+        payload = creds.get("payload") or {}
+        token = payload.get("token") or payload.get("api_key")
+        
+        # Если в payload пусто, ищем на верхнем уровне
         if not token:
-             return {"response": {"ok": False, "error_code": 401, "description": "Token not found"}}
+            token = creds.get("token") or creds.get("api_key")
+
+        if not token:
+             return {"response": {"ok": False, "error_code": 401, "description": "Token not found in credentials"}}
+        # =======================================
 
         user_id = config.get("user_id")
         message = config.get("message")

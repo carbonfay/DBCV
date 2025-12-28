@@ -71,9 +71,16 @@ class VkSendPhotoIntegration(BaseIntegration):
         if not creds:
             return {"response": {"ok": False, "error_code": 401, "description": "Credentials for VK not found"}}
 
-        token = creds.get("token") or creds.get("api_key")
+        # === УНИВЕРСАЛЬНОЕ ПОЛУЧЕНИЕ ТОКЕНА ===
+        payload = creds.get("payload") or {}
+        token = payload.get("token") or payload.get("api_key")
+        
+        if not token:
+            token = creds.get("token") or creds.get("api_key")
+
         if not token:
              return {"response": {"ok": False, "error_code": 401, "description": "Token not found"}}
+        # =======================================
 
         user_id = config.get("user_id")
         photo_path = config.get("photo_path")
@@ -87,17 +94,14 @@ class VkSendPhotoIntegration(BaseIntegration):
                 upload = VkUpload(vk_session)
 
                 # 1. Загружаем фото на сервер VK
-                # Внимание: путь должен быть доступен внутри Docker контейнера
                 photo_list = upload.photo_messages(photos=photo_path)
                 if not photo_list:
                     raise Exception("Failed to upload photo to VK server")
                 
                 photo = photo_list[0]
                 
-                # 2. Формируем attachment: photo{owner_id}_{id}
-                owner_id = photo['owner_id']
-                media_id = photo['id']
-                attachment = f"photo{owner_id}_{media_id}"
+                # 2. Формируем attachment
+                attachment = f"photo{photo['owner_id']}_{photo['id']}"
 
                 # 3. Отправляем сообщение
                 return vk.messages.send(
