@@ -8,3 +8,9 @@ except ImportError:
 
 # Внутренние интеграции DBCV
 from app.integrations.dbcv import *  # noqa: F401, F403
+
+# backend/app/integrations/__init__.py 
+try:
+    from app.integrations.yandex import *  # noqa: F401, F403
+except ImportError:
+    pass
