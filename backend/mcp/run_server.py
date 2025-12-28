@@ -11,7 +11,7 @@ backend_path = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_path))
 
 from server import server
-from config import config
+from mcp.config import config
 
 # Configure logging
 logging.basicConfig(

@@ -7,6 +7,8 @@ import sys
 import httpx
 from pathlib import Path
 
+import pytest
+
 # Add backend to path
 backend_path = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_path))
@@ -19,6 +21,8 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+pytestmark = [pytest.mark.asyncio, pytest.mark.skip(reason="Manual MCP test")]
 
 
 async def test_http_server():
