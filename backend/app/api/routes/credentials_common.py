@@ -133,6 +133,18 @@ def _get_all_providers() -> List[ProviderInfo]:
             }
         ),
         ProviderInfo(
+            value="medicine",
+            label="Medicine",
+            description="Medical reference API (base_url is configured in integration)",
+            supported_strategies=["api_key"],
+            payload_examples={
+                "api_key": {
+                    "api_key": "YOUR_API_KEY",
+                    "api_key_header": "X-API-Key"
+                }
+            }
+        ),
+        ProviderInfo(
             value="other",
             label="Другое",
             description="Другой провайдер",

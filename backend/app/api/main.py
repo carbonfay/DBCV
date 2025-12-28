@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from app.api.routes import (login, users, channels, bots, steps, messages,
                             widgets, requests, attachments, sockets, emitters, notes, cron, credentials, autonomous_assistant,
-                            integrations, presets, icons)
+                            integrations, presets, icons, medicine_articles)
 from app.api.routes import credentials_common
 from app.api.routes.connections import connections, connection_groups
 from app.api.routes.templates import templates, template_instance, template_group
@@ -28,5 +28,6 @@ api_router.include_router(credentials.router, prefix="/bots/{bot_id}/credentials
 api_router.include_router(credentials_common.router, prefix="/credentials", tags=["credentials-common"])
 api_router.include_router(autonomous_assistant.router, prefix="/autonomous-assistant", tags=["autonomous-assistant"])
 api_router.include_router(integrations.router, prefix="/integrations", tags=["integrations"])
+api_router.include_router(medicine_articles.router, tags=["medicine"])
 api_router.include_router(presets.router, prefix="/presets", tags=["presets"])
 api_router.include_router(icons.router, prefix="/icons", tags=["icons"])
