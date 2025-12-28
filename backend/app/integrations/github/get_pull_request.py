@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import logging
 import traceback
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -31,31 +30,24 @@ except ImportError as e:
     ApiException = ImportError
 
 
-class GitHubListCommitsIntegrationConfiguration(BaseModel):
+class GitHubGetPullRequestIntegrationConfiguration(BaseModel):
     owner_name: str = Field(min_length=1)
     repository_name: str = Field(min_length=1)
-    sha: Optional[str] = None
-    path: Optional[str] = None
-    author: Optional[str] = None
-    committer: Optional[str] = None
-    since: Optional[datetime] = None
-    until: Optional[datetime] = None
-    per_page: Optional[int] = Field(default=None, ge=1, le=100)
-    page: Optional[int] = Field(default=None, ge=1)
+    pull_number: int = Field(ge=1)
 
 
-class GitHubListCommitsIntegration(BaseIntegration):
+class GitHubGetPullRequestIntegration(BaseIntegration):
     @property
     def metadata(self) -> IntegrationMetadata:
         return IntegrationMetadata(
-            id="github_list_commits",
+            id="github_get_pull_request",
             version="1.0.0",
-            name="GitHub List Commits",
-            description="List commits by owner and repository name",
+            name="GitHub Get Pull Request",
+            description="Get pull request details by owner, repository name and pull number",
             category="storage",
             icon_s3_key="icons/integrations/github.svg",
             color="#24292e",
-            config_schema=GitHubListCommitsIntegrationConfiguration.model_json_schema(),
+            config_schema=GitHubGetPullRequestIntegrationConfiguration.model_json_schema(),
             credentials_provider="other",
             credentials_strategy="api_key",
             library_name="DBCV.backend.app.integrations.github.github_adapter.github_openapi_client"
@@ -63,8 +55,8 @@ class GitHubListCommitsIntegration(BaseIntegration):
             else None,
             examples=[
                 {
-                    "title": "List Commits",
-                    "config": {"owner_name": "octocat", "repository_name": "Hello-World"},
+                    "title": "Get Pull Request",
+                    "config": {"owner_name": "carbonfay", "repository_name": "DBCV", "pull_number": 330},
                 }
             ],
         )
@@ -77,36 +69,26 @@ class GitHubListCommitsIntegration(BaseIntegration):
         logger: BotLogger,
     ) -> Dict[str, Any]:
         try:
-            cfg = GitHubListCommitsIntegrationConfiguration.model_validate(config)
+            cfg = GitHubGetPullRequestIntegrationConfiguration.model_validate(config)
             token = await _resolve_github_token(credentials_resolver=credentials_resolver, bot_id=bot_id)
 
             service = get_github_service()
-            commits = await service.list_commits(
+            pr = await service.get_pull_request(
                 token=token,
                 owner=cfg.owner_name,
                 repo=cfg.repository_name,
-                sha=cfg.sha,
-                path=cfg.path,
-                author=cfg.author,
-                committer=cfg.committer,
-                since=cfg.since,
-                until=cfg.until,
-                per_page=cfg.per_page,
-                page=cfg.page,
+                pull_number=cfg.pull_number,
             )
 
-            result: List[Any] = []
-            for c in commits:
-                result.append(c.to_dict() if hasattr(c, "to_dict") else c)
-
+            result = pr.to_dict() if hasattr(pr, "to_dict") else pr
             return {"response": {"ok": True, "result": result}}
 
         except (GitHubTokenNotFoundError, GitHubCredentialsNotFoundError) as e:
-            await logger.error(f"github_list_commits token_resolver: {e}")
+            await logger.error(f"github_get_pull_request token_resolver: {e}")
             return {"response": {"ok": False, "error_code": 401, "error": str(e)}}
 
         except ApiException as e:
-            await logger.error(f"github_list_commits service.list_commits: {e}")
+            await logger.error(f"github_get_pull_request service.get_pull_request: {e}")
             status = getattr(e, "status", None)
             body = getattr(e, "body", None)
             return {
@@ -119,6 +101,6 @@ class GitHubListCommitsIntegration(BaseIntegration):
 
         except Exception as e:
             traceback_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            await logger.error(f"github_list_commits unexpected: {e}")
-            await logger.error(f"github_list_commits traceback: \n{traceback_str}")
+            await logger.error(f"github_get_pull_request unexpected: {e}")
+            await logger.error(f"github_get_pull_request traceback: \n{traceback_str}")
             return {"response": {"ok": False, "error_code": 500, "error": str(e)}}

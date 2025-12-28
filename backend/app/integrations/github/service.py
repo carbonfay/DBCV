@@ -7,10 +7,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, List
 
-from app.integrations.github.github_adapter.github_openapi_client.api.repos_api import ReposApi
 from app.integrations.github.github_adapter.github_openapi_client.api_client import ApiClient
 from app.integrations.github.github_adapter.github_openapi_client.configuration import Configuration
-from app.integrations.github.github_adapter.github_openapi_client.models.commit import Commit
+from app.integrations.github.github_adapter.github_openapi_client.api.pulls_api import PullsApi
+from app.integrations.github.github_adapter.github_openapi_client.models.pull_request import PullRequest
 
 
 @dataclass(frozen=True)
@@ -33,35 +33,9 @@ class GitHubService:
     def _api_client(self, *, token: str) -> ApiClient:
         return ApiClient(_build_configuration(token=token, settings=self._settings))
 
-    async def list_commits(
-        self,
-        *,
-        token: str,
-        owner: str,
-        repo: str,
-        sha: Optional[str] = None,
-        path: Optional[str] = None,
-        author: Optional[str] = None,
-        committer: Optional[str] = None,
-        since: Optional[datetime] = None,
-        until: Optional[datetime] = None,
-        per_page: Optional[int] = None,
-        page: Optional[int] = None,
-    ) -> List[Commit]:
+    async def get_pull_request(self, *, token: str, owner: str, repo: str, pull_number: int) -> PullRequest:
         async with self._api_client(token=token) as api_client:
-            return await ReposApi(api_client).repos_list_commits(
-                owner,
-                repo,
-                sha=sha,
-                path=path,
-                author=author,
-                committer=committer,
-                since=since,
-                until=until,
-                per_page=per_page,
-                page=page,
-            )
-
+            return await PullsApi(api_client).pulls_get(owner, repo, pull_number)
 
 _service_lock = threading.Lock()
 _service_instance: Optional[GitHubService] = None

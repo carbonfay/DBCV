@@ -18,7 +18,7 @@ __version__ = "1.0.0"
 
 # Define package exports
 __all__ = [
-    "ReposApi",
+    "PullsApi",
     "ApiResponse",
     "ApiClient",
     "Configuration",
@@ -31,15 +31,7 @@ __all__ = [
     "AuthorAssociation",
     "AutoMerge",
     "BasicError",
-    "Commit",
-    "CommitAuthor",
-    "CommitCommit",
-    "CommitCommitTree",
-    "CommitParentsInner",
-    "CommitStats",
-    "DiffEntry",
     "Link",
-    "NullableGitUser",
     "NullableLicenseSimple",
     "NullableMilestone",
     "NullableSimpleUser",
@@ -48,20 +40,19 @@ __all__ = [
     "PullRequestLabelsInner",
     "PullRequestLinks",
     "PullRequestWebhook",
+    "PullsGet503Response",
     "Repository",
     "RepositoryCodeSearchIndexStatus",
     "RepositoryPermissions",
     "RulesetVersion",
     "RulesetVersionActor",
     "RulesetVersionWithState",
-    "ScimError",
     "SimpleUser",
     "TeamSimple",
-    "Verification",
 ]
 
 # import apis into sdk package
-from github_openapi_client.api.repos_api import ReposApi as ReposApi
+from github_openapi_client.api.pulls_api import PullsApi as PullsApi
 
 # import ApiClient
 from github_openapi_client.api_response import ApiResponse as ApiResponse
@@ -78,15 +69,7 @@ from github_openapi_client.exceptions import ApiException as ApiException
 from github_openapi_client.models.author_association import AuthorAssociation as AuthorAssociation
 from github_openapi_client.models.auto_merge import AutoMerge as AutoMerge
 from github_openapi_client.models.basic_error import BasicError as BasicError
-from github_openapi_client.models.commit import Commit as Commit
-from github_openapi_client.models.commit_author import CommitAuthor as CommitAuthor
-from github_openapi_client.models.commit_commit import CommitCommit as CommitCommit
-from github_openapi_client.models.commit_commit_tree import CommitCommitTree as CommitCommitTree
-from github_openapi_client.models.commit_parents_inner import CommitParentsInner as CommitParentsInner
-from github_openapi_client.models.commit_stats import CommitStats as CommitStats
-from github_openapi_client.models.diff_entry import DiffEntry as DiffEntry
 from github_openapi_client.models.link import Link as Link
-from github_openapi_client.models.nullable_git_user import NullableGitUser as NullableGitUser
 from github_openapi_client.models.nullable_license_simple import NullableLicenseSimple as NullableLicenseSimple
 from github_openapi_client.models.nullable_milestone import NullableMilestone as NullableMilestone
 from github_openapi_client.models.nullable_simple_user import NullableSimpleUser as NullableSimpleUser
@@ -95,14 +78,13 @@ from github_openapi_client.models.pull_request_head import PullRequestHead as Pu
 from github_openapi_client.models.pull_request_labels_inner import PullRequestLabelsInner as PullRequestLabelsInner
 from github_openapi_client.models.pull_request_links import PullRequestLinks as PullRequestLinks
 from github_openapi_client.models.pull_request_webhook import PullRequestWebhook as PullRequestWebhook
+from github_openapi_client.models.pulls_get503_response import PullsGet503Response as PullsGet503Response
 from github_openapi_client.models.repository import Repository as Repository
 from github_openapi_client.models.repository_code_search_index_status import RepositoryCodeSearchIndexStatus as RepositoryCodeSearchIndexStatus
 from github_openapi_client.models.repository_permissions import RepositoryPermissions as RepositoryPermissions
 from github_openapi_client.models.ruleset_version import RulesetVersion as RulesetVersion
 from github_openapi_client.models.ruleset_version_actor import RulesetVersionActor as RulesetVersionActor
 from github_openapi_client.models.ruleset_version_with_state import RulesetVersionWithState as RulesetVersionWithState
-from github_openapi_client.models.scim_error import ScimError as ScimError
 from github_openapi_client.models.simple_user import SimpleUser as SimpleUser
 from github_openapi_client.models.team_simple import TeamSimple as TeamSimple
-from github_openapi_client.models.verification import Verification as Verification
 

@@ -67,25 +67,18 @@ configuration = github_openapi_client.Configuration(
 # Enter a context with an instance of the API client
 async with github_openapi_client.ApiClient(configuration) as api_client:
     # Create an instance of the API class
-    api_instance = github_openapi_client.ReposApi(api_client)
+    api_instance = github_openapi_client.PullsApi(api_client)
     owner = 'owner_example' # str | The account owner of the repository. The name is not case sensitive.
     repo = 'repo_example' # str | The name of the repository without the `.git` extension. The name is not case sensitive.
-    sha = 'sha_example' # str | SHA or branch to start listing commits from. Default: the repository’s default branch (usually `main`). (optional)
-    path = 'path_example' # str | Only commits containing this file path will be returned. (optional)
-    author = 'author_example' # str | GitHub username or email address to use to filter by commit author. (optional)
-    committer = 'committer_example' # str | GitHub username or email address to use to filter by commit committer. (optional)
-    since = '2013-10-20T19:20:30+01:00' # datetime | Only show results that were last updated after the given time. This is a timestamp in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format: `YYYY-MM-DDTHH:MM:SSZ`. Due to limitations of Git, timestamps must be between 1970-01-01 and 2099-12-31 (inclusive) or unexpected results may be returned. (optional)
-    until = '2013-10-20T19:20:30+01:00' # datetime | Only commits before this date will be returned. This is a timestamp in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format: `YYYY-MM-DDTHH:MM:SSZ`. Due to limitations of Git, timestamps must be between 1970-01-01 and 2099-12-31 (inclusive) or unexpected results may be returned. (optional)
-    per_page = 30 # int | The number of results per page (max 100). For more information, see \"[Using pagination in the REST API](https://docs.github.com/rest/using-the-rest-api/using-pagination-in-the-rest-api).\" (optional) (default to 30)
-    page = 1 # int | The page number of the results to fetch. For more information, see \"[Using pagination in the REST API](https://docs.github.com/rest/using-the-rest-api/using-pagination-in-the-rest-api).\" (optional) (default to 1)
+    pull_number = 56 # int | The number that identifies the pull request.
 
     try:
-        # List commits
-        api_response = await api_instance.repos_list_commits(owner, repo, sha=sha, path=path, author=author, committer=committer, since=since, until=until, per_page=per_page, page=page)
-        print("The response of ReposApi->repos_list_commits:\n")
+        # Get a pull request
+        api_response = await api_instance.pulls_get(owner, repo, pull_number)
+        print("The response of PullsApi->pulls_get:\n")
         pprint(api_response)
     except ApiException as e:
-        print("Exception when calling ReposApi->repos_list_commits: %s\n" % e)
+        print("Exception when calling PullsApi->pulls_get: %s\n" % e)
 
 ```
 
@@ -95,7 +88,7 @@ All URIs are relative to *https://api.github.com*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
-*ReposApi* | [**repos_list_commits**](docs/ReposApi.md#repos_list_commits) | **GET** /repos/{owner}/{repo}/commits | List commits
+*PullsApi* | [**pulls_get**](docs/PullsApi.md#pulls_get) | **GET** /repos/{owner}/{repo}/pulls/{pull_number} | Get a pull request
 
 
 ## Documentation For Models
@@ -103,15 +96,7 @@ Class | Method | HTTP request | Description
  - [AuthorAssociation](docs/AuthorAssociation.md)
  - [AutoMerge](docs/AutoMerge.md)
  - [BasicError](docs/BasicError.md)
- - [Commit](docs/Commit.md)
- - [CommitAuthor](docs/CommitAuthor.md)
- - [CommitCommit](docs/CommitCommit.md)
- - [CommitCommitTree](docs/CommitCommitTree.md)
- - [CommitParentsInner](docs/CommitParentsInner.md)
- - [CommitStats](docs/CommitStats.md)
- - [DiffEntry](docs/DiffEntry.md)
  - [Link](docs/Link.md)
- - [NullableGitUser](docs/NullableGitUser.md)
  - [NullableLicenseSimple](docs/NullableLicenseSimple.md)
  - [NullableMilestone](docs/NullableMilestone.md)
  - [NullableSimpleUser](docs/NullableSimpleUser.md)
@@ -120,16 +105,15 @@ Class | Method | HTTP request | Description
  - [PullRequestLabelsInner](docs/PullRequestLabelsInner.md)
  - [PullRequestLinks](docs/PullRequestLinks.md)
  - [PullRequestWebhook](docs/PullRequestWebhook.md)
+ - [PullsGet503Response](docs/PullsGet503Response.md)
  - [Repository](docs/Repository.md)
  - [RepositoryCodeSearchIndexStatus](docs/RepositoryCodeSearchIndexStatus.md)
  - [RepositoryPermissions](docs/RepositoryPermissions.md)
  - [RulesetVersion](docs/RulesetVersion.md)
  - [RulesetVersionActor](docs/RulesetVersionActor.md)
  - [RulesetVersionWithState](docs/RulesetVersionWithState.md)
- - [ScimError](docs/ScimError.md)
  - [SimpleUser](docs/SimpleUser.md)
  - [TeamSimple](docs/TeamSimple.md)
- - [Verification](docs/Verification.md)
 
 
 <a id="documentation-for-authorization"></a>

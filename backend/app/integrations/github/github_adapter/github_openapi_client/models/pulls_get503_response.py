@@ -17,20 +17,19 @@ import pprint
 import re  # noqa: F401
 import json
 
-from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field, StrictStr
+from pydantic import BaseModel, ConfigDict, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
 from typing import Optional, Set
 from typing_extensions import Self
 
-class NullableGitUser(BaseModel):
+class PullsGet503Response(BaseModel):
     """
-    Metaproperties for Git author/committer information.
+    PullsGet503Response
     """ # noqa: E501
-    name: Optional[StrictStr] = None
-    email: Optional[StrictStr] = None
-    var_date: Optional[datetime] = Field(default=None, alias="date")
-    __properties: ClassVar[List[str]] = ["name", "email", "date"]
+    code: Optional[StrictStr] = None
+    message: Optional[StrictStr] = None
+    documentation_url: Optional[StrictStr] = None
+    __properties: ClassVar[List[str]] = ["code", "message", "documentation_url"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -50,7 +49,7 @@ class NullableGitUser(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of NullableGitUser from a JSON string"""
+        """Create an instance of PullsGet503Response from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -75,7 +74,7 @@ class NullableGitUser(BaseModel):
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of NullableGitUser from a dict"""
+        """Create an instance of PullsGet503Response from a dict"""
         if obj is None:
             return None
 
@@ -83,9 +82,9 @@ class NullableGitUser(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "name": obj.get("name"),
-            "email": obj.get("email"),
-            "date": obj.get("date")
+            "code": obj.get("code"),
+            "message": obj.get("message"),
+            "documentation_url": obj.get("documentation_url")
         })
         return _obj
 

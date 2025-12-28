@@ -6,7 +6,7 @@ decorators:
   filter-in:
     property: operationId
     value:
-      - repos/list-commits
+      - pulls/get
   remove-unused-components: on
   keepRootTags: on
 
