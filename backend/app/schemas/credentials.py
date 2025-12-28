@@ -15,6 +15,7 @@ class Provider(str, Enum):
     yandex_id = "yandex_id"
     telegram = "telegram"
     discord = "discord"
+    openweathermap = "openweathermap"
     openai = "openai"
     other = "other"
 
