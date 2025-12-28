@@ -1,17 +1,14 @@
-# app/integrations/github/service.py (update only the list_commits method)
 from __future__ import annotations
 
 import os
 import threading
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Optional, List
-
+from typing import Optional
 from app.integrations.github.github_adapter.github_openapi_client.api_client import ApiClient
 from app.integrations.github.github_adapter.github_openapi_client.configuration import Configuration
-from app.integrations.github.github_adapter.github_openapi_client.api.pulls_api import PullsApi
-from app.integrations.github.github_adapter.github_openapi_client.models.pull_request import PullRequest
-
+from app.integrations.github.github_adapter.github_openapi_client.api.issues_api import IssuesApi
+from app.integrations.github.github_adapter.github_openapi_client.models.issue import Issue
+from app.integrations.github.github_adapter.github_openapi_client.models.issues_create_request import IssuesCreateRequest
 
 @dataclass(frozen=True)
 class GitHubClientSettings:
@@ -33,9 +30,17 @@ class GitHubService:
     def _api_client(self, *, token: str) -> ApiClient:
         return ApiClient(_build_configuration(token=token, settings=self._settings))
 
-    async def get_pull_request(self, *, token: str, owner: str, repo: str, pull_number: int) -> PullRequest:
+    async def create_issue(
+            self,
+            *,
+            token: str,
+            owner: str,
+            repo: str,
+            request: IssuesCreateRequest,
+    ) -> Issue:
+        headers = {"Authorization": f"Bearer {token}"}
         async with self._api_client(token=token) as api_client:
-            return await PullsApi(api_client).pulls_get(owner, repo, pull_number)
+            return await IssuesApi(api_client).issues_create(owner, repo, request, _headers=headers)
 
 _service_lock = threading.Lock()
 _service_instance: Optional[GitHubService] = None

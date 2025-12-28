@@ -1,8 +1,8 @@
-from app.integrations.github.get_pull_request import GitHubGetPullRequestIntegration
+from app.integrations.github.create_issue import GitHubCreateIssueIntegration
 from app.integrations.registry import registry
 
-registry.register(GitHubGetPullRequestIntegration())
+registry.register(GitHubCreateIssueIntegration())
 
 __all__ = [
-    "GitHubGetPullRequestIntegration",
+    "GitHubCreateIssueIntegration",
 ]

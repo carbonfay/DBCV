@@ -67,18 +67,18 @@ configuration = github_openapi_client.Configuration(
 # Enter a context with an instance of the API client
 async with github_openapi_client.ApiClient(configuration) as api_client:
     # Create an instance of the API class
-    api_instance = github_openapi_client.PullsApi(api_client)
+    api_instance = github_openapi_client.IssuesApi(api_client)
     owner = 'owner_example' # str | The account owner of the repository. The name is not case sensitive.
     repo = 'repo_example' # str | The name of the repository without the `.git` extension. The name is not case sensitive.
-    pull_number = 56 # int | The number that identifies the pull request.
+    issues_create_request = {"title":"Found a bug","body":"I'm having a problem with this.","assignees":["octocat"],"milestone":1,"labels":["bug"]} # IssuesCreateRequest | 
 
     try:
-        # Get a pull request
-        api_response = await api_instance.pulls_get(owner, repo, pull_number)
-        print("The response of PullsApi->pulls_get:\n")
+        # Create an issue
+        api_response = await api_instance.issues_create(owner, repo, issues_create_request)
+        print("The response of IssuesApi->issues_create:\n")
         pprint(api_response)
     except ApiException as e:
-        print("Exception when calling PullsApi->pulls_get: %s\n" % e)
+        print("Exception when calling IssuesApi->issues_create: %s\n" % e)
 
 ```
 
@@ -88,7 +88,7 @@ All URIs are relative to *https://api.github.com*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
-*PullsApi* | [**pulls_get**](docs/PullsApi.md#pulls_get) | **GET** /repos/{owner}/{repo}/pulls/{pull_number} | Get a pull request
+*IssuesApi* | [**issues_create**](docs/IssuesApi.md#issues_create) | **POST** /repos/{owner}/{repo}/issues | Create an issue
 
 
 ## Documentation For Models
@@ -96,7 +96,26 @@ Class | Method | HTTP request | Description
  - [AuthorAssociation](docs/AuthorAssociation.md)
  - [AutoMerge](docs/AutoMerge.md)
  - [BasicError](docs/BasicError.md)
+ - [Enterprise](docs/Enterprise.md)
+ - [Issue](docs/Issue.md)
+ - [IssueDependenciesSummary](docs/IssueDependenciesSummary.md)
+ - [IssueFieldValue](docs/IssueFieldValue.md)
+ - [IssueFieldValueSingleSelectOption](docs/IssueFieldValueSingleSelectOption.md)
+ - [IssueFieldValueValue](docs/IssueFieldValueValue.md)
+ - [IssueLabelsInner](docs/IssueLabelsInner.md)
+ - [IssueLabelsInnerOneOf](docs/IssueLabelsInnerOneOf.md)
+ - [IssuePullRequest](docs/IssuePullRequest.md)
+ - [IssueType](docs/IssueType.md)
+ - [IssuesCreate503Response](docs/IssuesCreate503Response.md)
+ - [IssuesCreateRequest](docs/IssuesCreateRequest.md)
+ - [IssuesCreateRequestLabelsInner](docs/IssuesCreateRequestLabelsInner.md)
+ - [IssuesCreateRequestLabelsInnerOneOf](docs/IssuesCreateRequestLabelsInnerOneOf.md)
+ - [IssuesCreateRequestMilestone](docs/IssuesCreateRequestMilestone.md)
+ - [IssuesCreateRequestTitle](docs/IssuesCreateRequestTitle.md)
  - [Link](docs/Link.md)
+ - [NullableIntegration](docs/NullableIntegration.md)
+ - [NullableIntegrationOwner](docs/NullableIntegrationOwner.md)
+ - [NullableIntegrationPermissions](docs/NullableIntegrationPermissions.md)
  - [NullableLicenseSimple](docs/NullableLicenseSimple.md)
  - [NullableMilestone](docs/NullableMilestone.md)
  - [NullableSimpleUser](docs/NullableSimpleUser.md)
@@ -105,15 +124,20 @@ Class | Method | HTTP request | Description
  - [PullRequestLabelsInner](docs/PullRequestLabelsInner.md)
  - [PullRequestLinks](docs/PullRequestLinks.md)
  - [PullRequestWebhook](docs/PullRequestWebhook.md)
- - [PullsGet503Response](docs/PullsGet503Response.md)
+ - [ReactionRollup](docs/ReactionRollup.md)
  - [Repository](docs/Repository.md)
  - [RepositoryCodeSearchIndexStatus](docs/RepositoryCodeSearchIndexStatus.md)
  - [RepositoryPermissions](docs/RepositoryPermissions.md)
  - [RulesetVersion](docs/RulesetVersion.md)
  - [RulesetVersionActor](docs/RulesetVersionActor.md)
  - [RulesetVersionWithState](docs/RulesetVersionWithState.md)
+ - [ScimError](docs/ScimError.md)
  - [SimpleUser](docs/SimpleUser.md)
+ - [SubIssuesSummary](docs/SubIssuesSummary.md)
  - [TeamSimple](docs/TeamSimple.md)
+ - [ValidationError](docs/ValidationError.md)
+ - [ValidationErrorErrorsInner](docs/ValidationErrorErrorsInner.md)
+ - [ValidationErrorErrorsInnerValue](docs/ValidationErrorErrorsInnerValue.md)
 
 
 <a id="documentation-for-authorization"></a>

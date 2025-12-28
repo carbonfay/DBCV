@@ -7,8 +7,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import Response
 from starlette.middleware.cors import CORSMiddleware
-
 from github_openapi_client.exceptions import ApiException
+from github_openapi_client.models.issues_create_request import IssuesCreateRequest
+from github_openapi_client.models.issues_create_request_title import IssuesCreateRequestTitle
 from app.integrations.github.service import get_github_service
 
 try:
@@ -28,11 +29,12 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 app = FastAPI(title="GitHub mini API", version="1.0.0", docs_url=None, redoc_url=None, openapi_url=None)
 
 
-@app.get("/repos/{owner}/{repo}/pulls/{pull_number}")
-async def get_pull_request(owner: str, repo: str, pull_number: int):
+@app.post("/repos/{owner}/{repo}/issues")
+async def create_issue(owner: str, repo: str, body: dict):
     svc = get_github_service()
     try:
-        return await svc.get_pull_request(token=GITHUB_TOKEN, owner=owner, repo=repo, pull_number=pull_number)
+        req = IssuesCreateRequest.from_dict(body) if hasattr(IssuesCreateRequest, "from_dict") else IssuesCreateRequest(**body)
+        return await svc.create_issue(token=GITHUB_TOKEN, owner=owner, repo=repo, request=req)
     except ApiException as e:
         code = getattr(e, "status", None) or 502
         raise HTTPException(status_code=code, detail=str(e))
@@ -63,10 +65,14 @@ app.add_middleware(
 )
 
 
-async def _debug_get_pull_request():
+async def _debug_create_issue():
     svc = get_github_service()
     try:
-        print(await svc.get_pull_request(token=GITHUB_TOKEN, owner="carbonfay", repo="DBCV", pull_number=330))
+        req = IssuesCreateRequest(
+            title=IssuesCreateRequestTitle("Test issue from adapter"),
+            body="created via local adapter",
+        )
+        print(await svc.create_issue(token=GITHUB_TOKEN, owner="octocat", repo="Hello-World", request=req))
     except ApiException as e:
         code = getattr(e, "status", None) or 502
         print(HTTPException(status_code=code, detail=str(e)))
@@ -78,5 +84,5 @@ async def _debug_get_pull_request():
 
 
 if __name__ == "__main__":
-    asyncio.run(_debug_get_pull_request())
+    asyncio.run(_debug_create_issue())
     uvicorn.run("main:app", host="0.0.0.0", reload=True, port=8081)

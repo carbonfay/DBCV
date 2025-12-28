@@ -17,7 +17,7 @@ if top is None:
 importlib.import_module("github_openapi_client.exceptions")
 importlib.import_module("github_openapi_client.api_client")
 importlib.import_module("github_openapi_client.configuration")
-importlib.import_module("github_openapi_client.api.pulls_api")
+importlib.import_module("github_openapi_client.api.issues_api")
 
 nested_root = __name__ + ".github_openapi_client"
 sys.modules[nested_root] = sys.modules["github_openapi_client"]

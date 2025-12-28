@@ -19,17 +19,18 @@ import json
 
 from pydantic import BaseModel, ConfigDict, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
+from github_openapi_client.models.validation_error_errors_inner import ValidationErrorErrorsInner
 from typing import Optional, Set
 from typing_extensions import Self
 
-class PullsGet503Response(BaseModel):
+class ValidationError(BaseModel):
     """
-    PullsGet503Response
+    Validation Error
     """ # noqa: E501
-    code: Optional[StrictStr] = None
-    message: Optional[StrictStr] = None
-    documentation_url: Optional[StrictStr] = None
-    __properties: ClassVar[List[str]] = ["code", "message", "documentation_url"]
+    message: StrictStr
+    documentation_url: StrictStr
+    errors: Optional[List[ValidationErrorErrorsInner]] = None
+    __properties: ClassVar[List[str]] = ["message", "documentation_url", "errors"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -49,7 +50,7 @@ class PullsGet503Response(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of PullsGet503Response from a JSON string"""
+        """Create an instance of ValidationError from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -70,11 +71,18 @@ class PullsGet503Response(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
+        # override the default output from pydantic by calling `to_dict()` of each item in errors (list)
+        _items = []
+        if self.errors:
+            for _item_errors in self.errors:
+                if _item_errors:
+                    _items.append(_item_errors.to_dict())
+            _dict['errors'] = _items
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of PullsGet503Response from a dict"""
+        """Create an instance of ValidationError from a dict"""
         if obj is None:
             return None
 
@@ -82,9 +90,9 @@ class PullsGet503Response(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "code": obj.get("code"),
             "message": obj.get("message"),
-            "documentation_url": obj.get("documentation_url")
+            "documentation_url": obj.get("documentation_url"),
+            "errors": [ValidationErrorErrorsInner.from_dict(_item) for _item in obj["errors"]] if obj.get("errors") is not None else None
         })
         return _obj
 

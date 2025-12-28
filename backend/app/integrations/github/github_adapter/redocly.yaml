@@ -6,7 +6,7 @@ decorators:
   filter-in:
     property: operationId
     value:
-      - pulls/get
+      - issues/create
   remove-unused-components: on
   keepRootTags: on
 

@@ -18,7 +18,7 @@ __version__ = "1.0.0"
 
 # Define package exports
 __all__ = [
-    "PullsApi",
+    "IssuesApi",
     "ApiResponse",
     "ApiClient",
     "Configuration",
@@ -31,7 +31,26 @@ __all__ = [
     "AuthorAssociation",
     "AutoMerge",
     "BasicError",
+    "Enterprise",
+    "Issue",
+    "IssueDependenciesSummary",
+    "IssueFieldValue",
+    "IssueFieldValueSingleSelectOption",
+    "IssueFieldValueValue",
+    "IssueLabelsInner",
+    "IssueLabelsInnerOneOf",
+    "IssuePullRequest",
+    "IssueType",
+    "IssuesCreate503Response",
+    "IssuesCreateRequest",
+    "IssuesCreateRequestLabelsInner",
+    "IssuesCreateRequestLabelsInnerOneOf",
+    "IssuesCreateRequestMilestone",
+    "IssuesCreateRequestTitle",
     "Link",
+    "NullableIntegration",
+    "NullableIntegrationOwner",
+    "NullableIntegrationPermissions",
     "NullableLicenseSimple",
     "NullableMilestone",
     "NullableSimpleUser",
@@ -40,19 +59,24 @@ __all__ = [
     "PullRequestLabelsInner",
     "PullRequestLinks",
     "PullRequestWebhook",
-    "PullsGet503Response",
+    "ReactionRollup",
     "Repository",
     "RepositoryCodeSearchIndexStatus",
     "RepositoryPermissions",
     "RulesetVersion",
     "RulesetVersionActor",
     "RulesetVersionWithState",
+    "ScimError",
     "SimpleUser",
+    "SubIssuesSummary",
     "TeamSimple",
+    "ValidationError",
+    "ValidationErrorErrorsInner",
+    "ValidationErrorErrorsInnerValue",
 ]
 
 # import apis into sdk package
-from github_openapi_client.api.pulls_api import PullsApi as PullsApi
+from github_openapi_client.api.issues_api import IssuesApi as IssuesApi
 
 # import ApiClient
 from github_openapi_client.api_response import ApiResponse as ApiResponse
@@ -69,7 +93,26 @@ from github_openapi_client.exceptions import ApiException as ApiException
 from github_openapi_client.models.author_association import AuthorAssociation as AuthorAssociation
 from github_openapi_client.models.auto_merge import AutoMerge as AutoMerge
 from github_openapi_client.models.basic_error import BasicError as BasicError
+from github_openapi_client.models.enterprise import Enterprise as Enterprise
+from github_openapi_client.models.issue import Issue as Issue
+from github_openapi_client.models.issue_dependencies_summary import IssueDependenciesSummary as IssueDependenciesSummary
+from github_openapi_client.models.issue_field_value import IssueFieldValue as IssueFieldValue
+from github_openapi_client.models.issue_field_value_single_select_option import IssueFieldValueSingleSelectOption as IssueFieldValueSingleSelectOption
+from github_openapi_client.models.issue_field_value_value import IssueFieldValueValue as IssueFieldValueValue
+from github_openapi_client.models.issue_labels_inner import IssueLabelsInner as IssueLabelsInner
+from github_openapi_client.models.issue_labels_inner_one_of import IssueLabelsInnerOneOf as IssueLabelsInnerOneOf
+from github_openapi_client.models.issue_pull_request import IssuePullRequest as IssuePullRequest
+from github_openapi_client.models.issue_type import IssueType as IssueType
+from github_openapi_client.models.issues_create503_response import IssuesCreate503Response as IssuesCreate503Response
+from github_openapi_client.models.issues_create_request import IssuesCreateRequest as IssuesCreateRequest
+from github_openapi_client.models.issues_create_request_labels_inner import IssuesCreateRequestLabelsInner as IssuesCreateRequestLabelsInner
+from github_openapi_client.models.issues_create_request_labels_inner_one_of import IssuesCreateRequestLabelsInnerOneOf as IssuesCreateRequestLabelsInnerOneOf
+from github_openapi_client.models.issues_create_request_milestone import IssuesCreateRequestMilestone as IssuesCreateRequestMilestone
+from github_openapi_client.models.issues_create_request_title import IssuesCreateRequestTitle as IssuesCreateRequestTitle
 from github_openapi_client.models.link import Link as Link
+from github_openapi_client.models.nullable_integration import NullableIntegration as NullableIntegration
+from github_openapi_client.models.nullable_integration_owner import NullableIntegrationOwner as NullableIntegrationOwner
+from github_openapi_client.models.nullable_integration_permissions import NullableIntegrationPermissions as NullableIntegrationPermissions
 from github_openapi_client.models.nullable_license_simple import NullableLicenseSimple as NullableLicenseSimple
 from github_openapi_client.models.nullable_milestone import NullableMilestone as NullableMilestone
 from github_openapi_client.models.nullable_simple_user import NullableSimpleUser as NullableSimpleUser
@@ -78,13 +121,18 @@ from github_openapi_client.models.pull_request_head import PullRequestHead as Pu
 from github_openapi_client.models.pull_request_labels_inner import PullRequestLabelsInner as PullRequestLabelsInner
 from github_openapi_client.models.pull_request_links import PullRequestLinks as PullRequestLinks
 from github_openapi_client.models.pull_request_webhook import PullRequestWebhook as PullRequestWebhook
-from github_openapi_client.models.pulls_get503_response import PullsGet503Response as PullsGet503Response
+from github_openapi_client.models.reaction_rollup import ReactionRollup as ReactionRollup
 from github_openapi_client.models.repository import Repository as Repository
 from github_openapi_client.models.repository_code_search_index_status import RepositoryCodeSearchIndexStatus as RepositoryCodeSearchIndexStatus
 from github_openapi_client.models.repository_permissions import RepositoryPermissions as RepositoryPermissions
 from github_openapi_client.models.ruleset_version import RulesetVersion as RulesetVersion
 from github_openapi_client.models.ruleset_version_actor import RulesetVersionActor as RulesetVersionActor
 from github_openapi_client.models.ruleset_version_with_state import RulesetVersionWithState as RulesetVersionWithState
+from github_openapi_client.models.scim_error import ScimError as ScimError
 from github_openapi_client.models.simple_user import SimpleUser as SimpleUser
+from github_openapi_client.models.sub_issues_summary import SubIssuesSummary as SubIssuesSummary
 from github_openapi_client.models.team_simple import TeamSimple as TeamSimple
+from github_openapi_client.models.validation_error import ValidationError as ValidationError
+from github_openapi_client.models.validation_error_errors_inner import ValidationErrorErrorsInner as ValidationErrorErrorsInner
+from github_openapi_client.models.validation_error_errors_inner_value import ValidationErrorErrorsInnerValue as ValidationErrorErrorsInnerValue
 
