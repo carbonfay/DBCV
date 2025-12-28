@@ -1,5 +1,7 @@
 """VK Send Photo интеграция используя vk-api библиотеку."""
 import random
+import os
+import tempfile
 from typing import Dict, Any
 from uuid import UUID
 
@@ -12,12 +14,14 @@ try:
     from vk_api import VkApi
     from vk_api.upload import VkUpload
     from vk_api.exceptions import ApiError
+    import aiohttp
     VK_API_AVAILABLE = True
 except Exception:
     VK_API_AVAILABLE = False
     VkApi = None
     VkUpload = None
     ApiError = Exception
+    aiohttp = None
 
 
 class VkSendPhotoIntegration(BaseIntegration):
@@ -27,7 +31,7 @@ class VkSendPhotoIntegration(BaseIntegration):
     def metadata(self) -> IntegrationMetadata:
         return IntegrationMetadata(
             id="vk_send_photo",
-            version="1.0.1",
+            version="1.0.2",
             name="VK Send Photo",
             description="Отправка фото в VK (сообщение) через vk-api",
             category="messaging",
@@ -35,7 +39,7 @@ class VkSendPhotoIntegration(BaseIntegration):
             color="#4c75a3",
             config_schema={
                 "type": "object",
-                "required": ["peer_id", "photo_path"],
+                "required": ["peer_id"],
                 "properties": {
                     "peer_id": {
                         "type": "integer",
@@ -46,6 +50,16 @@ class VkSendPhotoIntegration(BaseIntegration):
                         "type": "string",
                         "title": "Photo Path",
                         "description": "Путь к локальному файлу изображения на сервере"
+                    },
+                    "photo_url": {
+                        "type": "string",
+                        "title": "Photo URL",
+                        "description": "URL изображения для загрузки и отправки"
+                    },
+                    "photo_file_id": {
+                        "type": "string",
+                        "title": "Photo File ID",
+                        "description": "ID фото в VK (например, photo123_456 или photo123_456_789)"
                     },
                     "message": {
                         "type": "string",
@@ -64,6 +78,22 @@ class VkSendPhotoIntegration(BaseIntegration):
                         "peer_id": 12345678,
                         "photo_path": "/tmp/photo.jpg",
                         "message": "Привет!"
+                    }
+                },
+                {
+                    "title": "Отправить фото по URL",
+                    "config": {
+                        "peer_id": 12345678,
+                        "photo_url": "https://example.com/photo.jpg",
+                        "message": "Фото по ссылке!"
+                    }
+                },
+                {
+                    "title": "Отправить существующее фото по ID",
+                    "config": {
+                        "peer_id": 12345678,
+                        "photo_file_id": "photo123_456",
+                        "message": "Существующее фото!"
                     }
                 }
             ]
@@ -105,7 +135,7 @@ class VkSendPhotoIntegration(BaseIntegration):
             }
 
         payload = creds.get("payload", creds)
-        token = payload.get("access_token") or payload.get("token") or payload.get("vk_token")
+        token = payload.get("access_token") or payload.get("token") or payload.get("vk_token") or payload.get("api_key")
         if not token:
             await logger.error("VK token not found in credentials")
             return {
@@ -118,15 +148,27 @@ class VkSendPhotoIntegration(BaseIntegration):
 
         peer_id = config.get("peer_id")
         photo_path = config.get("photo_path")
+        photo_url = config.get("photo_url")
+        photo_file_id = config.get("photo_file_id")
         message = config.get("message")
 
-        if not peer_id or not photo_path:
-            await logger.error("peer_id and photo_path are required")
+        if not peer_id:
+            await logger.error("peer_id is required")
             return {
                 "response": {
                     "ok": False,
                     "error_code": 400,
-                    "description": "peer_id and photo_path are required",
+                    "description": "peer_id is required",
+                }
+            }
+
+        if not (photo_path or photo_url or photo_file_id):
+            await logger.error("one of photo_path, photo_url, or photo_file_id is required")
+            return {
+                "response": {
+                    "ok": False,
+                    "error_code": 400,
+                    "description": "one of photo_path, photo_url, or photo_file_id is required",
                 }
             }
 
@@ -135,24 +177,72 @@ class VkSendPhotoIntegration(BaseIntegration):
             vk = vk_session.get_api()
             upload = VkUpload(vk_session)
 
-            photos = upload.photo_messages([photo_path])
-            if not photos:
-                await logger.error("photo upload returned empty result")
-                return {
-                    "response": {
-                        "ok": False,
-                        "error_code": 500,
-                        "description": "Failed to upload photo",
+            attachment = None
+            if photo_path:
+                photos = upload.photo_messages([photo_path])
+                if not photos:
+                    await logger.error("photo upload returned empty result")
+                    return {
+                        "response": {
+                            "ok": False,
+                            "error_code": 500,
+                            "description": "Failed to upload photo",
+                        }
                     }
-                }
-
-            p = photos[0]
-            owner_id = p.get("owner_id")
-            photo_id = p.get("id")
-            access_key = p.get("access_key")
-            attachment = f"photo{owner_id}_{photo_id}"
-            if access_key:
-                attachment = f"{attachment}_{access_key}"
+                p = photos[0]
+                owner_id = p.get("owner_id")
+                photo_id = p.get("id")
+                access_key = p.get("access_key")
+                attachment = f"photo{owner_id}_{photo_id}"
+                if access_key:
+                    attachment = f"{attachment}_{access_key}"
+            elif photo_url:
+                if not aiohttp:
+                    await logger.error("aiohttp not available")
+                    return {
+                        "response": {
+                            "ok": False,
+                            "error_code": 500,
+                            "description": "aiohttp not installed",
+                        }
+                    }
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(photo_url) as resp:
+                        if resp.status != 200:
+                            await logger.error(f"Failed to download image from {photo_url}: {resp.status}")
+                            return {
+                                "response": {
+                                    "ok": False,
+                                    "error_code": 400,
+                                    "description": f"Failed to download image: {resp.status}",
+                                }
+                            }
+                        data = await resp.read()
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as f:
+                    f.write(data)
+                    temp_path = f.name
+                try:
+                    photos = upload.photo_messages([temp_path])
+                    if not photos:
+                        await logger.error("photo upload returned empty result")
+                        return {
+                            "response": {
+                                "ok": False,
+                                "error_code": 500,
+                                "description": "Failed to upload photo",
+                            }
+                        }
+                    p = photos[0]
+                    owner_id = p.get("owner_id")
+                    photo_id = p.get("id")
+                    access_key = p.get("access_key")
+                    attachment = f"photo{owner_id}_{photo_id}"
+                    if access_key:
+                        attachment = f"{attachment}_{access_key}"
+                finally:
+                    os.unlink(temp_path)
+            elif photo_file_id:
+                attachment = photo_file_id
 
             random_id = random.randint(1, 2 ** 31 - 1)
             send_result = vk.messages.send(
