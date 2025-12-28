@@ -45,8 +45,22 @@ class MCPConfig:
     
     def validate(self) -> None:
         """Validate configuration."""
-        if not self.openai_api_key:
-            raise ValueError("OPENAI_API_KEY is required")
+        # Проверяем, что ключ установлен и не является placeholder
+        placeholder_values = [
+            "sk-proj-your-openai-api-key-here",
+            "your-openai-api-key",
+            "sk-",
+            ""
+        ]
+        
+        if not self.openai_api_key or self.openai_api_key in placeholder_values:
+            raise ValueError("OPENAI_API_KEY is required. Please set a valid OpenAI API key in env.dev")
+        
+        # Проверяем, что ключ начинается с "sk-" (формат OpenAI ключей)
+        if not self.openai_api_key.startswith("sk-"):
+            logging.getLogger(__name__).warning(
+                f"OPENAI_API_KEY doesn't look like a valid OpenAI key (should start with 'sk-')"
+            )
         
         if not self.auth_token:
             logging.getLogger(__name__).warning(
