@@ -98,6 +98,29 @@ except ImportError:
 
 **Библиотека**: `python-telegram-bot>=20.0` (официально рекомендованная, безопасная)
 
+## Пример: Moodle Get Courses
+
+См. `backend/app/integrations/moodle/get_courses.py` - интеграция для получения списка курсов Moodle.
+
+**Библиотека**: `httpx>=0.27.0` (прямые запросы к Moodle Web Services API)
+
+**Credentials**:
+- provider: `moodle`
+- strategy: `api_key`
+- payload:
+```json
+{
+  "base_url": "https://moodle.example.com",
+  "token": "YOUR_MOODLE_TOKEN"
+}
+```
+
+**Config**:
+- `{}` - получить все курсы
+- `{"ids": [1, 2, 3]}` - фильтр по ID курсов
+- `{"field": "shortname", "value": "course_shortname"}` - фильтр по полю
+- `{"include_site_info": true}` - добавить данные сайта
+
 ## Безопасные библиотеки
 
 См. `backend/app/integrations/SAFE_LIBRARIES.md` - полный список безопасных библиотек для всех категорий интеграций.
@@ -129,4 +152,3 @@ except ImportError:
 ## Тестирование
 
 См. примеры тестов в `backend/app/tests/integrations/`.
-

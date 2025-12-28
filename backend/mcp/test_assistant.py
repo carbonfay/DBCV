@@ -6,12 +6,14 @@ import logging
 import sys
 from pathlib import Path
 
+import pytest
+
 # Add backend to path
 backend_path = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_path))
 
 from autonomous_assistant import AutonomousAssistant
-from config import config
+from mcp.config import config
 
 # Configure logging
 logging.basicConfig(
@@ -19,6 +21,8 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+pytestmark = [pytest.mark.asyncio, pytest.mark.skip(reason="Manual MCP test")]
 
 
 async def test_assistant():

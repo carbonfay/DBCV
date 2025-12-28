@@ -10,8 +10,8 @@ from mcp.types import (
     CallToolRequest, CallToolResult
 )
 
-from client import DBCVAPIClient
-from schemas import BotInfo, BotCreate, BotUpdate
+from mcp.client import DBCVAPIClient
+from mcp.schemas import BotInfo, BotCreate, BotUpdate
 from .common import DEFAULT_ALLOWED_ROLES, ensure_authorized_roles
 
 logger = logging.getLogger(__name__)

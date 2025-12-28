@@ -35,6 +35,11 @@ from app.api.routes import channels
 
 config = ConfigParser()
 config.read("tests/.test_env")
+# Если нет тестового конфига, пропускаем модульные тесты шагов
+required_keys = {"POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_DB"}
+if not config.sections() or any(k not in config["DEFAULT"] for k in required_keys):
+    import pytest as _pytest
+    _pytest.skip("tests/.test_env не найден или неполный; пропускаем тесты шагов", allow_module_level=True)
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -54,7 +59,7 @@ async def db_engine():
     # Удаляем тестовую базу данных перед тестом
     conn = await asyncpg.connect(f"postgresql{db_url}")
     try:
-        await conn.execute(f"DROP DATABASE IF EXISTS {config["DEFAULT"]["POSTGRES_DB"]}_test WITH (FORCE)")
+        await conn.execute(f"DROP DATABASE IF EXISTS {config['DEFAULT']['POSTGRES_DB']}_test WITH (FORCE)")
     finally:
         await conn.close()
 
@@ -62,7 +67,7 @@ async def db_engine():
     # Подключение через asyncpg для выполнения CREATE DATABASE
     conn = await asyncpg.connect(f"postgresql{db_url}")
     try:
-        await conn.execute(f"CREATE DATABASE {config["DEFAULT"]["POSTGRES_DB"]}_test")
+        await conn.execute(f"CREATE DATABASE {config['DEFAULT']['POSTGRES_DB']}_test")
     except asyncpg.DuplicateDatabaseError:
         # База данных уже существует
         pass

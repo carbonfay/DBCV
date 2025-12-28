@@ -11,7 +11,7 @@ current_path = Path(__file__).parent
 sys.path.insert(0, str(current_path))
 
 from http_server import app
-from config import config
+from mcp.config import config
 import uvicorn
 
 # Configure logging

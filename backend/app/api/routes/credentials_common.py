@@ -121,6 +121,30 @@ def _get_all_providers() -> List[ProviderInfo]:
             }
         ),
         ProviderInfo(
+            value="moodle",
+            label="Moodle",
+            description="Moodle Web Services API (provide base_url and token)",
+            supported_strategies=["api_key"],
+            payload_examples={
+                "api_key": {
+                    "base_url": "https://moodle.example.com",
+                    "token": "YOUR_MOODLE_TOKEN"
+                }
+            }
+        ),
+        ProviderInfo(
+            value="medicine",
+            label="Medicine",
+            description="Medicine integrations (FHIR/RxNorm/MedlinePlus/custom)",
+            supported_strategies=["api_key"],
+            payload_examples={
+                "api_key": {
+                    "api_key": "OPTIONAL",
+                    "api_key_header": "X-API-Key"
+                }
+            }
+        ),
+        ProviderInfo(
             value="other",
             label="Другое",
             description="Другой провайдер",
@@ -181,4 +205,3 @@ async def get_strategies(
             return StrategiesResponse(strategies=strategies)
     
     return StrategiesResponse(strategies=all_strategies)
-
