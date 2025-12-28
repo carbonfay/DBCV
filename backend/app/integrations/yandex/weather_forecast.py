@@ -22,7 +22,7 @@ class YandexWeatherForecastIntegration(BaseIntegration):
     def metadata(self) -> IntegrationMetadata:
         return IntegrationMetadata(
             id="yandex_weather_forecast",
-            version="1.0.0",
+            version="1.0.1",
             name="Yandex Weather Forecast",
             description="Получение прогноза погоды от Yandex Weather API",
             category="weather",
