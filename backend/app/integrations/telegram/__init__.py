@@ -1,7 +1,10 @@
 """Telegram интеграции."""
-from .send_message import TelegramSendMessageIntegration
+from app.integrations.telegram.get_chat_members_count import TelegramGetChatMembersCountIntegration
 from app.integrations.registry import registry
 
-# Автоматическая регистрация интеграций
-registry.register(TelegramSendMessageIntegration())
+# Регистрируем интеграции
+registry.register(TelegramGetChatMembersCountIntegration())
 
+__all__ = [
+    "TelegramGetChatMembersCountIntegration",
+]
