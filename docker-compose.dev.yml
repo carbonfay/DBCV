@@ -111,7 +111,7 @@ services:
     command: redis-server --maxmemory 1gb --maxmemory-policy noeviction --port 6389
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: [ "CMD", "redis-cli", "-p", "6389", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -205,10 +205,9 @@ services:
     networks:
       - my_network
     command: python scheduler.py
-
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "pgrep", "python3"]
+      test: ["CMD", "pgrep", "python"]
       interval: 30s
       timeout: 10s
       retries: 5
