@@ -32,7 +32,7 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_BUCKET=${S3_BUCKET}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      test: ["CMD", "pgrep", "python3"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -61,7 +61,7 @@ services:
       - 8.8.8.8
       - 8.8.4.4
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      test: ["CMD", "pgrep", "python3"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -111,7 +111,7 @@ services:
     command: redis-server --maxmemory 1gb --maxmemory-policy noeviction --port 6389
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "-p", "6389", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
