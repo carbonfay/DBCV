@@ -81,3 +81,15 @@ async def delete_step(session: SessionDep, current_user: CurrentUser, step_id: U
 
 
 
+
+@router.post("/{step_id}/run", response_model=Message)
+async def run_step(step_id: Union[UUID, str], session: SessionDep, current_user: CurrentUser) -> Message:
+    """
+    Run a step (запуск шага по UUID).
+    Пока реализовано как заглушка.
+    """
+    # Здесь должна быть ваша бизнес-логика запуска шага
+    return Message(message=f"Step {step_id} run successfully (stub)")
+
+
+
