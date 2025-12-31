@@ -1,10 +1,16 @@
 """Интеграции с внешними сервисами."""
-# Автоматическая регистрация интеграций при импорте
+"""Интеграции с внешними сервисами."""
+# Автоматическая регистрация интеграций при импорте — импортируем конкретные
+# модули интеграций (подмодули), чтобы их код мог зарегистрировать себя.
 try:
-    from app.integrations.telegram import *  # noqa: F401, F403
+    import importlib
+    # Messaging
+    importlib.import_module('app.integrations.telegram.send_message')
+    # Medicine
+    importlib.import_module('app.integrations.medicine.search_drugs')
 except ImportError:
     # Библиотека не установлена, пропускаем
     pass
 
-# Внутренние интеграции DBCV
+# Внутренние интеграции DBCV (оставляем как есть)
 from app.integrations.dbcv import *  # noqa: F401, F403
