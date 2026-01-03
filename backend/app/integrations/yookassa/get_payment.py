@@ -154,7 +154,7 @@ class YookassaGetPaymentIntegration(BaseIntegration):
                             "currency": payment.amount.currency
                         } if payment.amount else None,
                         "description": payment.description,
-                        "created_at": payment.created_at.isoformat() if payment.created_at else None,
+                        "created_at": payment.created_at.isoformat() if payment.created_at and hasattr(payment.created_at, 'isoformat') else str(payment.created_at) if payment.created_at else None,
                         "paid": payment.paid,
                         "refundable": payment.refundable,
                         "metadata": payment.metadata if hasattr(payment, 'metadata') else {},
