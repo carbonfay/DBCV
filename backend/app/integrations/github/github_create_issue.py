@@ -75,10 +75,10 @@ class GitHubCreateIssueIntegration(BaseIntegration):
                     "config": {
                         "owner": "OWNER",
                         "repo": "REPO",
-                        "title": "Crazy a bug",
+                        "title": "Chao from DBCV!!!",
                         "body": "I'm having a problem with this.",
                         "assignees": "akmsher",
-                        "labels": "funny bug"
+                        "labels": "bug"
                     }
                 }
             ]
