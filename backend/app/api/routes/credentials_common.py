@@ -121,6 +121,19 @@ def _get_all_providers() -> List[ProviderInfo]:
             }
         ),
         ProviderInfo(
+            value="medicine",
+            label="Medicine",
+            description="Медицинские API (Infermedica, CMS provider-data, NPI Registry, PubMed и др.)",
+            supported_strategies=["api_key", "other"],
+            payload_examples={
+                "api_key": {
+                    "app_token": "YOUR_APP_TOKEN_HERE",
+                    "app_id": "YOUR_APP_ID",
+                    "app_key": "YOUR_APP_KEY"
+                }
+            }
+        ),
+        ProviderInfo(
             value="other",
             label="Другое",
             description="Другой провайдер",

@@ -3,12 +3,27 @@
 import logging
 import logging.config
 import traceback
+import os
+import sys
+from pathlib import Path
 from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI, Request
 from starlette.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
+
+# Автоматически настраиваем PYTHONPATH для корректного импорта модулей
+# Определяем директорию backend (родительскую от app)
+_MAIN_FILE = Path(__file__).resolve()
+_BACKEND_DIR = _MAIN_FILE.parent.parent  # backend/app/main.py -> backend/app -> backend
+if str(_BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_DIR))
+    # Обновляем PYTHONPATH в окружении
+    current_pythonpath = os.environ.get('PYTHONPATH', '')
+    if str(_BACKEND_DIR) not in current_pythonpath:
+        separator = ':' if current_pythonpath else ''
+        os.environ['PYTHONPATH'] = current_pythonpath + separator + str(_BACKEND_DIR)
 
 from app.schemas import rebuild_models
 
@@ -66,12 +81,34 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logging.error(f"Failed to start background services: {exc}")
     finally:
-        await broker.close()
-        await fast_socket_app.stop()
-        logging.info("Background services stopped")
-        await global_http_client.aclose()
+        # Завершаем фоновые сервисы с таймаутом для избежания зависания при перезагрузке
+        import asyncio
+        try:
+            await asyncio.wait_for(broker.close(), timeout=5.0)
+        except asyncio.TimeoutError:
+            logging.warning("Broker close timeout, forcing shutdown")
+        except Exception as e:
+            logging.error(f"Error closing broker: {e}")
+        
+        try:
+            await asyncio.wait_for(fast_socket_app.stop(), timeout=5.0)
+        except asyncio.TimeoutError:
+            logging.warning("FastSocket app stop timeout, forcing shutdown")
+        except Exception as e:
+            logging.error(f"Error stopping fast_socket_app: {e}")
+        
+        try:
+            await asyncio.wait_for(global_http_client.aclose(), timeout=2.0)
+        except (asyncio.TimeoutError, Exception) as e:
+            logging.warning(f"Error closing HTTP client: {e}")
+        
         if sessionmanager.engine is not None:  # pyright: ignore
-            await sessionmanager.close()
+            try:
+                await asyncio.wait_for(sessionmanager.close(), timeout=5.0)
+            except (asyncio.TimeoutError, Exception) as e:
+                logging.warning(f"Error closing database: {e}")
+        
+        logging.info("Background services stopped")
 
 
 app = FastAPI(

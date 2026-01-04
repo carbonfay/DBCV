@@ -17,6 +17,9 @@ class StepModel(BaseModel, Block):
     bot_id: Mapped[Optional[UUID]] = mapped_column(ForeignKey("bot.id"), nullable=True)
     bot: Mapped[Optional["BotModel"]] = relationship("BotModel", back_populates="steps", foreign_keys=bot_id, lazy="select", load_on_pending=True)
 
+    credential_id: Mapped[Optional[UUID]] = mapped_column(ForeignKey("credentials_entity.id", ondelete="SET NULL"), nullable=True)
+    credential: Mapped[Optional["CredentialEntity"]] = relationship("CredentialEntity", foreign_keys=credential_id, lazy="select", load_on_pending=True)
+
     is_proxy: Mapped[bool] = mapped_column(default=False)
 
     message: Mapped[Union["MessageModel", None]] = relationship("MessageModel", back_populates="step", lazy="selectin", load_on_pending=True, foreign_keys="MessageModel.step_id", uselist=False, cascade="all,delete")
@@ -28,6 +31,14 @@ class StepModel(BaseModel, Block):
 
     template_instance_id: Mapped[Optional[UUID]] = mapped_column(ForeignKey("template_instance.id", ondelete="SET NULL"), nullable=True)
     template_instance: Mapped[Optional["TemplateInstanceModel"]] = relationship("TemplateInstanceModel", foreign_keys=template_instance_id, lazy="selectin", load_on_pending=True, cascade="all,delete")
+
+    execution_data: Mapped[List["StepExecutionDataModel"]] = relationship(
+        "StepExecutionDataModel", 
+        back_populates="step", 
+        foreign_keys="[StepExecutionDataModel.step_id]",
+        lazy="select",
+        cascade="all,delete"
+    )
 
     simple_eager_relationships = {}
 

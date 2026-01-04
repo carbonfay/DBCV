@@ -22,6 +22,27 @@ class IntegrationRegistry:
         """
         metadata = integration.metadata
         version = version or metadata.version
+        # Если передали явную версию, пересобираем метаданные и подменяем
+        if version != metadata.version:
+            override = IntegrationMetadata(
+                id=metadata.id,
+                version=version,
+                name=metadata.name,
+                description=metadata.description,
+                category=metadata.category,
+                icon_s3_key=metadata.icon_s3_key,
+                color=metadata.color,
+                config_schema=metadata.config_schema,
+                credentials_provider=metadata.credentials_provider,
+                credentials_strategy=metadata.credentials_strategy,
+                library_name=metadata.library_name,
+                examples=metadata.examples,
+            )
+            try:
+                setattr(integration, "metadata", override)
+                metadata = override
+            except Exception:
+                metadata = override
         key = (metadata.id, version)
         self._integrations[key] = integration
         
@@ -49,12 +70,44 @@ class IntegrationRegistry:
         Returns:
             Экземпляр интеграции или None
         """
+        def _wrap(integration: BaseIntegration, desired_version: str) -> BaseIntegration:
+            if not integration:
+                return None
+            if getattr(integration.metadata, "version", None) == desired_version:
+                return integration
+            override = IntegrationMetadata(
+                id=integration.metadata.id,
+                version=desired_version,
+                name=integration.metadata.name,
+                description=integration.metadata.description,
+                category=integration.metadata.category,
+                icon_s3_key=integration.metadata.icon_s3_key,
+                color=integration.metadata.color,
+                config_schema=integration.metadata.config_schema,
+                credentials_provider=integration.metadata.credentials_provider,
+                credentials_strategy=integration.metadata.credentials_strategy,
+                library_name=integration.metadata.library_name,
+                examples=integration.metadata.examples,
+            )
+
+            class _WrappedIntegration(BaseIntegration):
+                @property
+                def metadata(self) -> IntegrationMetadata:
+                    return override
+
+                async def execute(self, config, credentials_resolver, bot_id, logger):
+                    return await integration.execute(config, credentials_resolver, bot_id, logger)
+
+            return _WrappedIntegration()
+
         if version:
-            return self._integrations.get((integration_id, version))
+            integration = self._integrations.get((integration_id, version))
+            return _wrap(integration, version)
         # Возвращаем последнюю версию
         latest_version = self._latest_versions.get(integration_id)
         if latest_version:
-            return self._integrations.get((integration_id, latest_version))
+            integration = self._integrations.get((integration_id, latest_version))
+            return _wrap(integration, latest_version)
         return None
     
     def list_all(self, latest_only: bool = True) -> List[IntegrationMetadata]:

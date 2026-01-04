@@ -277,3 +277,31 @@ CurrentBotEditorDep = Annotated[UserModel, CurrentBotEditor]
 
 CurrentBotViewer = BotAccessChecker.has_access_or_higher(AccessType.VIEWER)
 CurrentBotViewerDep = Annotated[UserModel, CurrentBotViewer]
+
+
+class BotOwnerChecker:
+    @classmethod
+    async def _is_bot_owner(
+        cls, 
+        session: SessionDep, 
+        bot_id: Union[UUID, str], 
+        current_user: CurrentUser
+    ) -> UserModel:
+        """Проверяет, что пользователь является владельцем бота. Строгая проверка - только owner_id."""
+        bot = await get_bot(session, bot_id, eager_relationships={})
+        if bot.owner_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, 
+                detail="Only bot owner can access credential payload."
+            )
+        return current_user
+
+    @classmethod
+    def is_bot_owner(cls) -> Depends:
+        async def dependency(session: SessionDep, bot_id: Union[UUID, str], current_user: CurrentUser) -> UserModel:
+            return await cls._is_bot_owner(session, bot_id, current_user)
+        return Depends(dependency)
+
+
+CurrentBotOwner = BotOwnerChecker.is_bot_owner()
+CurrentBotOwnerDep = Annotated[UserModel, CurrentBotOwner]

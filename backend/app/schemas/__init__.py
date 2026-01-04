@@ -25,6 +25,7 @@ _MODEL_MODULES = [
     "app.schemas.note",
     "app.schemas.credentials",
     "app.schemas.session",
+    "app.schemas.step_execution_data",
 ]
 
 _model_rebuilders: list[Callable[[], None]] = []

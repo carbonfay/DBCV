@@ -6,6 +6,7 @@ from app.api.routes import (login, users, channels, bots, steps, messages,
 from app.api.routes import credentials_common
 from app.api.routes.connections import connections, connection_groups
 from app.api.routes.templates import templates, template_instance, template_group
+from app.api.routes import step_execution_data
 api_router = APIRouter()
 api_router.include_router(login.router, tags=["login"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
@@ -30,3 +31,4 @@ api_router.include_router(autonomous_assistant.router, prefix="/autonomous-assis
 api_router.include_router(integrations.router, prefix="/integrations", tags=["integrations"])
 api_router.include_router(presets.router, prefix="/presets", tags=["presets"])
 api_router.include_router(icons.router, prefix="/icons", tags=["icons"])
+api_router.include_router(step_execution_data.router)

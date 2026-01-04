@@ -1,7 +1,6 @@
 from typing import Annotated, Any, Optional, Union
 from uuid import UUID
 import json
-import traceback
 
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy import select
@@ -21,16 +20,15 @@ from app.schemas.message import Message, MessageCreate, MessagePublic
 from app.api.dependencies.auth import get_current_user, CurrentUser, CurrentDeveloper, CurrentAdmin
 from app.api.dependencies.auth import BotAccessChecker
 from app.config import settings
-from app.managers.data_manager import DataManager
-from app.loggers import BotLogger
-from app.schemas.bot import BotProcessor
 from app.engine.bot_processor import ConnectionHandlerFactory
-from app.engine.variables import update_variables_dict
+from app.loggers.bot import NoopBotLogger
+from app.utils.dict import deep_merge_dicts, get_value_by_list_keys, deep_set
+from app.managers.data_manager import DataManager
 from app.auth.credentials_resolver import CredentialsResolver
 from app.auth.service import AuthService
-from app.utils.dict import deep_merge_dicts
-from app.models.connection import SearchType
-
+from app.schemas.bot import BotProcessor
+from app.crud.step import validate_step_credential
+from app.schemas import step as schemas_step_pkg
 router = APIRouter()
 
 
@@ -96,138 +94,174 @@ async def delete_step(session: SessionDep, current_user: CurrentUser, step_id: U
 
 @router.post(
     "/{step_id}/run",
-    response_model=schemas_step.StepExecuteOut,
+    response_model=schemas_step.ExecuteStepOut,
 )
 async def run_step(
     step_id: Union[UUID, str],
     session: SessionDep,
     current_user: CurrentUser,
-    step_in: schemas_step.StepExecuteIn,
+    request_in: schemas_step.ExecuteStepIn,
 ) -> Any:
     """
-    Выполняет все действия в шаге: проход по всем группам связей и выполнение действий
-    (код, интеграции, HTTP-запросы) в порядке приоритета.
+    Выполняет шаг с переданными переменными для тестирования/отладки.
+    Выполняет все connection_groups шага и возвращает результаты.
     """
-    step = await crud_step.get_step(session, step_id, StepModel.default_eager_relationships)
-    if not step:
-        raise HTTPException(status_code=404, detail="Step not found")
+    # 1. Получить шаг с eager_relationships
+    step = await crud_step.get_step(
+        session, 
+        step_id, 
+        eager_relationships=StepModel.default_eager_relationships
+    )
     
-    await BotAccessChecker._has_access_by_step(session, step_id, current_user, AccessType.EDITOR)
+    # 2. Проверить доступ (используем _has_access_or_higher, чтобы EDITOR тоже проходил)
+    bot_id_for_access = step.bot_id
+    if not bot_id_for_access:
+        raise HTTPException(
+            status_code=400, 
+            detail="Step must have bot_id to check access"
+        )
+    await BotAccessChecker._has_access_or_higher(
+        session, bot_id_for_access, current_user, AccessType.VIEWER
+    )
     
-    bot_id = step_in.bot_id or step.bot_id
+    # 3. Определить bot_id
+    bot_id = request_in.bot_id or step.bot_id
     if not bot_id:
-        raise HTTPException(status_code=400, detail="bot_id is required")
+        raise HTTPException(
+            status_code=400, 
+            detail="bot_id is required (either in request or step.bot_id)"
+        )
+
+    # 3.1 Валидация разового credential для запуска (если указан)
+    if request_in.credential_id:
+        await validate_step_credential(
+            session,
+            credential_id=request_in.credential_id,
+            bot_id=bot_id,
+            step_id=step_id,
+        )
     
-    dm = DataManager(Redis.from_url(settings.REDIS_URL), session.bind)
-    logger = BotLogger(str(bot_id))
-    logger.set_step(str(step_id))
-    
-    bot_data = await dm.get_bot(str(bot_id))
-    if not bot_data:
-        raise HTTPException(status_code=404, detail="Bot not found")
-    bot = BotProcessor(**bot_data)
-    
+    # 4. Преобразовать в StepExport
     step_export = schemas_step.StepExport.model_validate(step)
+
+    # 4.1 Применяем временный credential_id для запуска (без сохранения в БД)
+    if request_in.credential_id:
+        step_export.credential_id = request_in.credential_id
+        # Прокидываем в connection_groups -> step, чтобы StepAwareCredentialsResolver увидел override
+        for cg in step_export.connection_groups or []:
+            if cg.step:
+                cg.step.credential_id = request_in.credential_id
+            else:
+                # Создаем минимальный StepSimple, если отсутствует
+                cg.step = schemas_step_pkg.StepSimple(
+                    id=step_export.id,
+                    name=step_export.name,
+                    is_proxy=step_export.is_proxy,
+                    description=step_export.description,
+                    bot_id=step_export.bot_id,
+                    credential_id=request_in.credential_id,
+                    template_instance_id=step_export.template_instance_id,
+                    timeout_after=step_export.timeout_after,
+                )
     
-    sorted_groups = sorted(step_export.connection_groups, key=lambda g: g.priority)
-    
-    all_variables = step_in.variables.copy() if step_in.variables else {}
-    context = step_in.context.copy() if step_in.context else {}
-    
-    merged_context = deep_merge_dicts(all_variables, context)
-    
+    # 5. Инициализировать зависимости
+    dm = DataManager(Redis.from_url(settings.REDIS_URL), session.bind)
+    bot = BotProcessor(**(await dm.get_bot(bot_id)))
     resolver = CredentialsResolver(dm)
     auth_service = AuthService(resolver)
+    logger = NoopBotLogger()  # Не логируем в тестовом режиме
     
-    results = []
+    # 6. Инициализировать переменные
+    all_variables = request_in.variables.copy() if request_in.variables else {}
+    context = request_in.variables.copy() if request_in.variables else {}
     
-    for group in sorted_groups:
-        await logger.info(f"Processing connection group {group.id} (type: {group.search_type}, priority: {group.priority})...")
-        
-        handler = ConnectionHandlerFactory.get_handler(
-            group.search_type,
-            logger,
-            bot=bot,
-            auth=auth_service,
-            data_manager=dm
-        )
-        
-        if not handler:
-            if group.search_type == SearchType.message:
-                await logger.info("Skipping message type connection group")
-                continue
-            else:
-                await logger.warning(f"No handler found for search_type: {group.search_type}")
-                results.append(schemas_step.GroupExecutionResult(
-                    group_id=str(group.id),
-                    search_type=group.search_type.value,
-                    priority=group.priority,
-                    result=None,
-                    variables_updated=None
-                ))
-                continue
+    # 7. Выполнить connection_groups
+    connection_groups_results = []
+    executed_count = 0
+    success_count = 0
+    error_count = 0
+    
+    for connection_group in step_export.connection_groups:
+        executed_count += 1
+        result_data = None
+        error_msg = None
+        variables_updated = {}
         
         try:
-            handler_result = await handler.handle(
-                connection_group=group,
-                context=merged_context,
-                all_variables=all_variables
+            # Получить handler
+            handler = ConnectionHandlerFactory.get_handler(
+                connection_group.search_type,
+                logger,
+                bot,
+                auth_service,
+                dm
             )
             
-            if handler_result is not None:
-                merged_context = deep_merge_dicts(merged_context, handler_result)
-                if isinstance(handler_result, dict):
-                    context = deep_merge_dicts(context, handler_result)
-            
-            variables_before = all_variables.copy()
-            if group.variables:
-                try:
-                    variables_save_as = group.variables
-                    if isinstance(variables_save_as, str):
-                        variables_save_as = json.loads(variables_save_as)
+            if handler:
+                # Выполнить handler
+                result_data = await handler.handle(
+                    connection_group,
+                    context,
+                    all_variables
+                )
+                
+                # Обновить переменные в памяти (если указаны в connection_group.variables)
+                if connection_group.variables:
+                    variables_str = connection_group.variables
+                    if isinstance(variables_str, str):
+                        try:
+                            variables_mapping = json.loads(variables_str)
+                        except json.JSONDecodeError:
+                            variables_mapping = {}
+                    else:
+                        variables_mapping = variables_str
                     
-                    all_variables = await update_variables_dict(
-                        all_variables,
-                        session, 
-                        variables_save_as,
-                        merged_context
-                    )
-                    
-                    await logger.info("Variables updated in memory")
-                except Exception as e:
-                    await logger.error(f"Error saving variables: {e}")
-            
-            variables_updated = None
-            if group.variables and all_variables != variables_before:
-                variables_updated = {}
-                for key in all_variables:
-                    if key not in variables_before or all_variables[key] != variables_before.get(key):
-                        variables_updated[key] = all_variables[key]
-            
-            results.append(schemas_step.GroupExecutionResult(
-                group_id=str(group.id),
-                search_type=group.search_type.value,
-                priority=group.priority,
-                result=handler_result,
-                variables_updated=variables_updated
-            ))
-            
+                    # Упрощённое обновление переменных в памяти (без сохранения в БД)
+                    merged_context = deep_merge_dicts(all_variables, {"response": result_data} if result_data else {})
+                    for source_path, target_path in variables_mapping.items():
+                        # Простая логика: извлечь значение из merged_context по source_path
+                        # и поместить в all_variables по target_path
+                        value = get_value_by_list_keys(merged_context, source_path.split("."))
+                        if value is not None:
+                            deep_set(all_variables, target_path, value)
+                            deep_set(variables_updated, target_path, value)
+                
+                # Обновить context для следующего connection_group
+                if result_data:
+                    context = deep_merge_dicts(context, {"response": result_data})
+                
+                success_count += 1
+            else:
+                error_msg = f"Handler not found for search_type: {connection_group.search_type}"
+                error_count += 1
+                
         except Exception as e:
-            await logger.error(f"Error executing connection group {group.id}: {e}")
-            traceback_str = ''.join(traceback.format_exception(type(e), e, e.__traceback__))
-            await logger.error(f"Traceback: {traceback_str}")
-            
-            results.append(schemas_step.GroupExecutionResult(
-                group_id=str(group.id),
-                search_type=group.search_type.value,
-                priority=group.priority,
-                result={"error": str(e), "traceback": traceback_str},
-                variables_updated=None
-            ))
+            error_msg = str(e)
+            error_count += 1
+            await logger.error(f"Error executing connection_group {connection_group.id}: {e}")
+        
+        # Определить search_type как строку
+        search_type_str = connection_group.search_type.value if hasattr(connection_group.search_type, 'value') else str(connection_group.search_type)
+        
+        connection_groups_results.append(
+            schemas_step.ConnectionGroupResult(
+                connection_group_id=connection_group.id,
+                search_type=search_type_str,
+                result=result_data,
+                error=error_msg,
+                variables_updated=variables_updated
+            )
+        )
     
-    return schemas_step.StepExecuteOut(
-        results=results,
-        final_variables=all_variables
+    # 8. Вернуть результат
+    return schemas_step.ExecuteStepOut(
+        step_id=str(step_id),
+        step_name=step.name,
+        connection_groups_results=connection_groups_results,
+        final_variables=all_variables,
+        executed_count=executed_count,
+        success_count=success_count,
+        error_count=error_count
     )
 
 

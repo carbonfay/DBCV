@@ -16,6 +16,7 @@ class Provider(str, Enum):
     telegram = "telegram"
     discord = "discord"
     openai = "openai"
+    medicine = "medicine"
     other = "other"
 
 
@@ -65,6 +66,13 @@ class CredentialUpdate(BaseModel):
         cleaned = [s.strip() for s in v if isinstance(s, str) and s.strip()]
         return cleaned or None
 
+    @field_validator("payload")
+    @classmethod
+    def _validate_payload(cls, v: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        if v is not None and not isinstance(v, dict):
+            raise ValueError("payload must be a dictionary")
+        return v
+
 
 # Публичное представление (для API/админки): payload не выдаём
 class CredentialPublic(CredentialBase):
@@ -100,6 +108,11 @@ class CredentialCreateOut(CredentialPublic):
 
 class CredentialUpdateOut(CredentialPublic):
     pass
+
+
+class CredentialPayloadResponse(BaseModel):
+    """Ответ с расшифрованным payload credential."""
+    payload: Dict[str, Any] = Field(..., description="Расшифрованный payload с секретами")
 
 
 class CredentialListOut(BaseModel):

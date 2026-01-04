@@ -11,3 +11,4 @@ __pycache__
 .cursor/settings.jsonc
 env.dev
 env.prod
+**/.env

@@ -250,7 +250,7 @@ class QueryProvider:
         if strategy:
             base += " AND strategy = :strategy"
             params["strategy"] = strategy
-        base += " LIMIT 1"
+        base += " ORDER BY is_default DESC, id ASC LIMIT 1"
         return base, params
 
     @staticmethod
@@ -275,8 +275,21 @@ class DataManager:
         self.query_provider = QueryProvider(engine)
 
     @staticmethod
+    def _convert_params_to_str(params: dict) -> dict:
+        """Преобразует UUID объекты в строки для совместимости с asyncpg."""
+        from uuid import UUID
+        converted = {}
+        for key, value in params.items():
+            if isinstance(value, UUID):
+                converted[key] = str(value)
+            else:
+                converted[key] = value
+        return converted
+
+    @staticmethod
     async def _get_db_query(db_query: Callable[[], tuple[str, dict]], conn) -> dict:
         query, params = db_query()
+        params = DataManager._convert_params_to_str(params)
         result = await conn.execute(text(query), params)
         row = result.mappings().first()
         if not row:
@@ -287,6 +300,7 @@ class DataManager:
     @staticmethod
     async def _get_list_db_query(db_query: Callable[[], tuple[str, dict]], conn) -> list:
         query, params = db_query()
+        params = DataManager._convert_params_to_str(params)
         result = await conn.execute(text(query), params)
         data = [dict(row) for row in result.mappings()]
         return data
@@ -330,6 +344,7 @@ class DataManager:
     @staticmethod
     async def _update_db_query(db_query: Callable[[], tuple[str, dict]], conn) -> dict:
         query, params = db_query()
+        params = DataManager._convert_params_to_str(params)
         result = await conn.execute(text(query), params)
         row = result.mappings().first()
         await conn.commit()
@@ -526,6 +541,7 @@ class DataManager:
             logger.debug(f"Cache miss: {key}, checking DB")
 
             query, params = QueryProvider.get_session_query(user_id, bot_id, channel_id)
+            params = DataManager._convert_params_to_str(params)
             async with self.engine.connect() as conn:
                 result = await conn.execute(text(query), params)
                 row = result.mappings().first()
@@ -626,6 +642,7 @@ class DataManager:
     async def get_credential_internal_by_id(self, cred_id: str) -> dict:
         async with self.engine.connect() as conn:
             q, p = self.query_provider.get_credential_by_id(cred_id)
+            p = DataManager._convert_params_to_str(p)
             row = (await conn.execute(text(q), p)).mappings().first()
             if not row:
                 return {}
@@ -644,6 +661,7 @@ class DataManager:
         # Если нет в кэше, загружаем из БД
         async with self.engine.connect() as conn:
             q, p = self.query_provider.get_default_credential(bot_id, provider, strategy)
+            p = DataManager._convert_params_to_str(p)
             row = (await conn.execute(text(q), p)).mappings().first()
             if not row:
                 return {}
@@ -666,6 +684,7 @@ class DataManager:
         # Если нет в кэше, загружаем из БД
         async with self.engine.connect() as conn:
             q, p = self.query_provider.get_single_for_provider(bot_id, provider, strategy)
+            p = DataManager._convert_params_to_str(p)
             rows = [dict(r) for r in (await conn.execute(text(q), p)).mappings().all()]
             if len(rows) != 1:
                 return None

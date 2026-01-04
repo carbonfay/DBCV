@@ -20,4 +20,5 @@ from .template import TemplateModel
 from .template_instance import TemplateInstanceModel
 from .template_group import TemplateGroupModel
 from .credentials import CredentialEntity
+from .step_execution_data import StepExecutionDataModel
 

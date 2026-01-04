@@ -93,8 +93,12 @@ else:
     raise ValueError(f"Unknown role: {role}")
 
 
+# Глобальная переменная для хранения задачи reclaim_pending
+_reclaim_task = None
+
 @app.after_startup
 async def after_startup_tasks():
+    global _reclaim_task
     stream_name = settings.BOT_STREAM_NAME if role == "bot" else settings.USER_STREAM_NAME
     group_name = settings.BOT_STREAM_GROUP if role == "bot" else settings.USER_STREAM_GROUP
 
@@ -110,6 +114,9 @@ async def after_startup_tasks():
 
         while True:
             try:
+                # Проверяем, не была ли задача отменена
+                await asyncio.sleep(0)  # Даем возможность другим задачам выполниться
+                
                 pending = await redis.xpending_range(
                     stream_name,
                     group_name,
@@ -134,13 +141,33 @@ async def after_startup_tasks():
                     logger.info(f"[{role.upper()}] Claimed {len(claimed)} message(s)")
 
                     await process_batch(claimed, stream_name, group_name, from_claim=True)
+            except asyncio.CancelledError:
+                logger.info(f"[{role.upper()}] Reclaim loop cancelled")
+                break
             except Exception as e:
                 logger.exception(f"[{role.upper()}] Error during reclaim_pending: {e}")
 
             logger.debug(f"[{role.upper()}] Reclaim loop sleeping 30s...")
-            await asyncio.sleep(30)
+            try:
+                await asyncio.sleep(30)
+            except asyncio.CancelledError:
+                logger.info(f"[{role.upper()}] Reclaim loop cancelled during sleep")
+                break
 
-    asyncio.create_task(reclaim_pending())
+    _reclaim_task = asyncio.create_task(reclaim_pending())
+
+
+@app.after_shutdown
+async def after_shutdown_tasks():
+    """Отменяем фоновые задачи при shutdown."""
+    global _reclaim_task
+    if _reclaim_task and not _reclaim_task.done():
+        logger.info(f"[{role.upper()}] Cancelling reclaim_pending task")
+        _reclaim_task.cancel()
+        try:
+            await _reclaim_task
+        except asyncio.CancelledError:
+            pass
 
 
 if __name__ == "__main__":

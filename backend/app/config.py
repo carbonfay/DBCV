@@ -9,6 +9,49 @@ import os
 from pathlib import Path
 
 
+def _load_env_dev():
+    """Автоматически загружает env.dev файл из возможных местоположений."""
+    BASE_DIR = Path(__file__).resolve().parent
+    
+    # Возможные пути к env.dev
+    possible_paths = [
+        BASE_DIR / "env.dev",  # backend/app/env.dev
+        BASE_DIR.parent.parent / "env.dev",  # корень проекта
+        BASE_DIR.parent / "env.dev",  # backend/env.dev
+    ]
+    
+    for env_path in possible_paths:
+        if env_path.exists() and env_path.is_file():
+            try:
+                with open(env_path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line = line.strip()
+                        # Пропускаем пустые строки и комментарии
+                        if not line or line.startswith('#'):
+                            continue
+                        # Парсим KEY=VALUE
+                        if '=' in line:
+                            key, value = line.split('=', 1)
+                            key = key.strip()
+                            value = value.strip()
+                            # Убираем кавычки если есть
+                            if value.startswith('"') and value.endswith('"'):
+                                value = value[1:-1]
+                            elif value.startswith("'") and value.endswith("'"):
+                                value = value[1:-1]
+                            # Устанавливаем переменную окружения только если она еще не установлена
+                            if key and key not in os.environ:
+                                os.environ[key] = value
+                return
+            except Exception:
+                # Игнорируем ошибки чтения, пробуем следующий путь
+                continue
+
+
+# Загружаем env.dev автоматически при импорте модуля
+_load_env_dev()
+
+
 def _parse_secret_box_key(s: str) -> bytes:
     s = s.strip()
     try:

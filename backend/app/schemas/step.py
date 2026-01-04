@@ -3,7 +3,7 @@
 from typing import TYPE_CHECKING, List, Optional, Union, Dict, Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, Field, computed_field
 
 from app.utils.decorators import partial_model
 from app.schemas.block import Block
@@ -25,6 +25,7 @@ class StepBase(Block):
 class StepRelation(StepBase):
     bot_id: Union[UUID, str]
     template_instance_id: Optional[Union[UUID, str]] = None
+    credential_id: Optional[Union[UUID, str]] = None
 
 
 class StepSimple(StepRelation):
@@ -69,27 +70,47 @@ class StepTemplate(StepBase):
         return value
 
 
-class StepExecuteIn(BaseModel):
-    """Входные параметры для выполнения шага."""
-    # Context variables in format {"bot": {...}, "channel": {...}, "session": {...}, "user": {...}}
+class ExecuteStepIn(BaseModel):
+    """Входные данные для выполнения шага."""
+    # Context variables в формате {"bot": {...}, "channel": {...}, "session": {...}, "user": {...}}
     variables: Dict[str, Any] = Field(default_factory=dict)
-    bot_id: Optional[Union[UUID, str]] = None
-    context: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Дополнительный контекст выполнения")
+    bot_id: Optional[Union[UUID, str]] = None  # Если не указан, берётся из step.bot_id
+    credential_id: Optional[Union[UUID, str]] = None  # Разовый выбор credential для запуска (без сохранения)
+    # Dry-run: только подстановка переменных, без реального выполнения
+    dry_run: bool = False
 
 
-class GroupExecutionResult(BaseModel):
-    """Результат выполнения одной группы связей."""
-    group_id: str
+class ConnectionGroupResult(BaseModel):
+    """Результат выполнения одного connection_group."""
+    connection_group_id: Union[UUID, str]
     search_type: str
-    priority: int
-    result: Any = Field(default=None, description="Результат выполнения handler")
-    variables_updated: Optional[Dict[str, Any]] = Field(default=None, description="Обновленные переменные после группы")
+    result: Optional[Any] = None
+    error: Optional[str] = None
+    variables_updated: Dict[str, Any] = Field(default_factory=dict)
+    priority: Optional[int] = None  # Для совместимости с фронтендом
+    
+    @computed_field
+    @property
+    def group_id(self) -> str:
+        """Алиас для connection_group_id для совместимости с фронтендом."""
+        return str(self.connection_group_id)
 
 
-class StepExecuteOut(BaseModel):
+class ExecuteStepOut(BaseModel):
     """Результат выполнения шага."""
-    results: List[GroupExecutionResult] = Field(default_factory=list, description="Результаты выполнения всех групп")
-    final_variables: Dict[str, Any] = Field(default_factory=dict, description="Финальное состояние переменных после всех групп")
+    step_id: Union[UUID, str]
+    step_name: str
+    connection_groups_results: List[ConnectionGroupResult]
+    final_variables: Dict[str, Any]
+    executed_count: int
+    success_count: int
+    error_count: int
+    
+    @computed_field
+    @property
+    def results(self) -> List[Dict[str, Any]]:
+        """Алиас для connection_groups_results для совместимости с фронтендом."""
+        return [item.model_dump(mode='json') for item in self.connection_groups_results]
 
 
 def _rebuild_models() -> None:
@@ -102,9 +123,9 @@ def _rebuild_models() -> None:
         StepCreate,
         StepUpdate,
         StepTemplate,
-        StepExecuteIn,
-        GroupExecutionResult,
-        StepExecuteOut,
+        ExecuteStepIn,
+        ConnectionGroupResult,
+        ExecuteStepOut,
     ):
         model.model_rebuild()
 
