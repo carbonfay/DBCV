@@ -172,7 +172,7 @@ async def list_compatible_credentials(
     filtered = all_credentials
     if provider:
         filtered = [c for c in filtered if c.provider == provider]
-    if strategy:
+    if strategy and strategy != "other":
         filtered = [c for c in filtered if c.strategy == strategy]
     
     return filtered
