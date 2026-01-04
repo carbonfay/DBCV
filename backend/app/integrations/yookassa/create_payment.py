@@ -209,23 +209,36 @@ class YookassaCreatePaymentIntegration(BaseIntegration):
             # Создаем платеж
             payment = Payment.create(payment_data)
 
+            # Проверяем, что платеж создался успешно
+            if not payment:
+                await logger.error("Payment creation returned None")
+                return {
+                    "response": {
+                        "ok": False,
+                        "error_code": 500,
+                        "description": "Payment creation failed - returned None",
+                    }
+                }
+
             # Возвращаем результат в формате системы
             return {
                 "response": {
                     "ok": True,
                     "result": {
-                        "id": payment.id,
-                        "status": payment.status,
+                        "id": getattr(payment, "id", None),
+                        "status": getattr(payment, "status", None),
                         "amount": {
                             "value": payment.amount.value,
                             "currency": payment.amount.currency,
                         }
                         if payment.amount
                         else None,
-                        "description": payment.description,
+                        "description": getattr(payment, "description", None),
                         "confirmation": {
-                            "type": payment.confirmation.type,
-                            "confirmation_url": payment.confirmation.confirmation_url,
+                            "type": getattr(payment.confirmation, "type", None),
+                            "confirmation_url": getattr(
+                                payment.confirmation, "confirmation_url", None
+                            ),
                         }
                         if payment.confirmation
                         else None,
@@ -235,21 +248,27 @@ class YookassaCreatePaymentIntegration(BaseIntegration):
                         else str(payment.created_at)
                         if payment.created_at
                         else None,
-                        "paid": payment.paid,
-                        "refundable": payment.refundable,
-                        "metadata": payment.metadata
-                        if hasattr(payment, "metadata")
-                        else {},
-                        "test": payment.test if hasattr(payment, "test") else False,
+                        "paid": getattr(payment, "paid", False),
+                        "refundable": getattr(payment, "refundable", False),
+                        "metadata": getattr(payment, "metadata", {}),
+                        "test": getattr(payment, "test", False),
                     },
                 }
             }
         except ApiError as e:
             await logger.error(f"YooKassa API error: {e}")
+            # Try different possible attribute names for error code
+            error_code = 400
+            if hasattr(e, "http_code"):
+                error_code = e.http_code
+            elif hasattr(e, "status_code"):
+                error_code = e.status_code
+            elif hasattr(e, "code"):
+                error_code = e.code
             return {
                 "response": {
                     "ok": False,
-                    "error_code": getattr(e, "http_code", 400),
+                    "error_code": error_code,
                     "description": str(e),
                 }
             }
