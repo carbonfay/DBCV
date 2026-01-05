@@ -14,3 +14,9 @@ except ImportError:
 
 # Внутренние интеграции DBCV
 from app.integrations.dbcv import *  # noqa: F401, F403
+
+# paypal интеграция
+try:
+    from app.integrations.paypal import *  # noqa: F401, F403
+except ImportError:
+    pass
