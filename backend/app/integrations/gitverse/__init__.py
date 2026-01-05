@@ -1,6 +1,5 @@
 from .get_commits import GitVerseGetCommits
+from app.integrations.registry import registry
 
-INTEGRATIONS = [
-    GitVerseGetCommits,
-    # Другие интеграции (если есть)
-]
+# Регистрация интеграции
+registry.register(GitVerseGetCommits())
