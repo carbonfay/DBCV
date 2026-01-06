@@ -1,0 +1,1 @@
+import{a as o}from"./useUsersStore-DeqpMyJa.js";function m(){const r=o(),a=()=>{const e=new Date,n=String(e.getDate()).padStart(2,"0"),t=String(e.getMonth()+1).padStart(2,"0");return`${n}/${t}`};return{generateName:e=>{const n=a(),t=r.currentUser;return`Новый ${e} ${(t==null?void 0:t.first_name)||""} ${(t==null?void 0:t.last_name)||""} ${n}`}}}export{m as u};

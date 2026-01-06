@@ -1,0 +1,18 @@
+FROM node:lts-alpine
+
+# install simple http server for serving static content
+RUN npm install -g http-server
+
+RUN mkdir -p /frontend
+# make the 'app' folder the current working directory
+WORKDIR /frontend
+
+COPY . .
+
+WORKDIR /frontend/app
+
+# install project dependencies
+RUN npm install
+RUN npm install -g serve
+EXPOSE 5173
+CMD ["npm", "run", "devtest"]

@@ -1,0 +1,10 @@
+version: "3.7"
+services:
+  frontend:
+    container_name: frontend_dbcv_dev
+    build:
+      context: ./frontend
+      dockerfile: ./Dockerfile.dev
+    ports:
+      - "5173:5173"
+    stdin_open: true

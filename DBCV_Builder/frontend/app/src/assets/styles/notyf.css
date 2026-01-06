@@ -1,0 +1,11 @@
+.notyf__wrapper {
+  padding: 8px 15px 8px 0;
+}
+
+.notyf__message {
+  font-size: 12px;
+}
+
+.notyf__toast {
+  border-radius: 4px;
+}
