@@ -71,3 +71,5 @@ hubspot-api-client>=7.0.0
 # - NewsAPI
 # - PayPal (preferred)
 # - Medical reference APIs
+
+httpx 
