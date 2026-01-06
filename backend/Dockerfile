@@ -10,7 +10,9 @@ RUN git --version
 ENV PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 WORKDIR /backend
 COPY requirements.txt /backend/
-RUN pip install -r requirements.txt
+
+# ИЗМЕНЕННАЯ СТРОКА (тайм-аут 1000 секунд)
+RUN pip install --default-timeout=1000 --no-cache-dir -r requirements.txt
 
 COPY . .
 WORKDIR /backend/app
