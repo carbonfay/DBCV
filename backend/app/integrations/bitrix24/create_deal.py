@@ -28,53 +28,53 @@ class Bitrix24CreateDealIntegration(BaseIntegration):
             config_schema={
                 "type": "object",
                 "properties": {
-                    # Expose common deal fields as top-level properties so frontend renders them as separate inputs
-                    "TITLE": {"type": "string", "title": "TITLE", "description": "Deal title. If empty, generated as Deal #{id}."},
-                    "OPPORTUNITY": {"type": "number", "title": "OPPORTUNITY", "description": "Amount (default 0.00)."},
-                    "CURRENCY_ID": {"type": "string", "title": "CURRENCY_ID", "description": "Currency identifier (crm_currency)."},
-                    "TYPE_ID": {"type": "string", "title": "TYPE_ID", "description": "String identifier of the deal type (crm_status)."},
-                    "CATEGORY_ID": {"type": "integer", "title": "CATEGORY_ID", "description": "Identifier of the funnel (>=0)."},
-                    "STAGE_ID": {"type": "string", "title": "STAGE_ID", "description": "Stage of the deal (crm_status)."},
-                    "PROBABILITY": {"type": "integer", "title": "PROBABILITY", "description": "Probability in percent."},
-                    "IS_RECURRING": {"type": "string", "title": "IS_RECURRING", "description": "Is the deal a template for recurring deals. Y/N."},
-                    "IS_RETURN_CUSTOMER": {"type": "string", "title": "IS_RETURN_CUSTOMER", "description": "Is the deal a repeat. Y/N."},
-                    "IS_REPEATED_APPROACH": {"type": "string", "title": "IS_REPEATED_APPROACH", "description": "Is repeated approach. Y/N."},
-                    "IS_MANUAL_OPPORTUNITY": {"type": "string", "title": "IS_MANUAL_OPPORTUNITY", "description": "Is manual calculation enabled. Y/N."},
-                    "TAX_VALUE": {"type": "number", "title": "TAX_VALUE", "description": "Tax amount."},
-                    "COMPANY_ID": {"type": "integer", "title": "COMPANY_ID", "description": "Identifier of the company associated with the deal."},
-                    "CONTACT_ID": {"type": "integer", "title": "CONTACT_ID", "description": "Contact (deprecated)."},
-                    "CONTACT_IDS": {"type": "array", "items": {"type": "integer"}, "title": "CONTACT_IDS", "description": "List of contacts associated with the deal."},
-                    "BEGINDATE": {"type": "string", "format": "date", "title": "BEGINDATE", "description": "Start date."},
-                    "CLOSEDATE": {"type": "string", "format": "date", "title": "CLOSEDATE", "description": "Completion date."},
-                    "OPENED": {"type": "string", "title": "OPENED", "description": "Is the deal available to everyone. Y/N."},
-                    "CLOSED": {"type": "string", "title": "CLOSED", "description": "Is the deal closed. Y/N."},
-                    "COMMENTS": {"type": "string", "title": "COMMENTS", "description": "Comment (supports bb-codes)."},
-                    "ASSIGNED_BY_ID": {"type": "integer", "title": "ASSIGNED_BY_ID", "description": "Responsible user id."},
-                    "SOURCE_ID": {"type": "string", "title": "SOURCE_ID", "description": "String identifier of the source type."},
-                    "SOURCE_DESCRIPTION": {"type": "string", "title": "SOURCE_DESCRIPTION", "description": "Additional info about the source."},
-                    "ADDITIONAL_INFO": {"type": "string", "title": "ADDITIONAL_INFO", "description": "Additional information."},
-                    "LOCATION_ID": {"type": "string", "title": "LOCATION_ID", "description": "Client location (system field)."},
-                    "ORIGINATOR_ID": {"type": "string", "title": "ORIGINATOR_ID", "description": "Identifier of the data source."},
-                    "ORIGIN_ID": {"type": "string", "title": "ORIGIN_ID", "description": "Identifier of the element in the data source."},
-                    "UTM_SOURCE": {"type": "string", "title": "UTM_SOURCE", "description": "Advertising system."},
-                    "UTM_MEDIUM": {"type": "string", "title": "UTM_MEDIUM", "description": "Type of traffic (CPC, CPM, etc.)."},
-                    "UTM_CAMPAIGN": {"type": "string", "title": "UTM_CAMPAIGN", "description": "Advertising campaign name."},
-                    "UTM_CONTENT": {"type": "string", "title": "UTM_CONTENT", "description": "Content of campaign."},
-                    "UTM_TERM": {"type": "string", "title": "UTM_TERM", "description": "Search term of campaign."},
-                    "TRACE": {"type": "string", "title": "TRACE", "description": "Information for Sales Intelligence."},
+                    # Основные поля сделки — отображаются как отдельные поля в UI
+                    "TITLE": {"type": "string", "title": "Название сделки", "description": "Название сделки. Если пусто — будет сгенерировано автоматически."},
+                    "OPPORTUNITY": {"type": "number", "title": "Сумма", "description": "Сумма сделки (по умолчанию 0.00)."},
+                    "CURRENCY_ID": {"type": "string", "title": "Валюта", "description": "Код валюты (например: USD)."},
+                    "TYPE_ID": {"type": "string", "title": "Тип сделки", "description": "Строковый идентификатор типа сделки."},
+                    "CATEGORY_ID": {"type": "integer", "title": "Воронка (CATEGORY_ID)", "description": "ID воронки/категории (целое число)."},
+                    "STAGE_ID": {"type": "string", "title": "Стадия (STAGE_ID)", "description": "Код стадии сделки в воронке."},
+                    "PROBABILITY": {"type": "integer", "title": "Вероятность", "description": "Вероятность успеха в процентах."},
+                    "IS_RECURRING": {"type": "string", "title": "Повторяющаяся", "description": "Является ли шаблоном для повторяющихся сделок (Y/N)."},
+                    "IS_RETURN_CUSTOMER": {"type": "string", "title": "Повторный клиент", "description": "Отмечает, что клиент возвращается (Y/N)."},
+                    "IS_REPEATED_APPROACH": {"type": "string", "title": "Повторный подход", "description": "Повторный подход к клиенту (Y/N)."},
+                    "IS_MANUAL_OPPORTUNITY": {"type": "string", "title": "Ручной расчёт суммы", "description": "Ручной ввод суммы вместо автоматического расчёта (Y/N)."},
+                    "TAX_VALUE": {"type": "number", "title": "Налог", "description": "Сумма налога для сделки."},
+                    "COMPANY_ID": {"type": "integer", "title": "Компания (ID)", "description": "ID компании, связанной со сделкой."},
+                    "CONTACT_ID": {"type": "integer", "title": "Контакт (ID)", "description": "ID основного контакта (устаревшее поле)."},
+                    "CONTACT_IDS": {"type": "array", "items": {"type": "integer"}, "title": "Контакты (IDs)", "description": "Список ID контактов, связанных со сделкой."},
+                    "BEGINDATE": {"type": "string", "format": "date", "title": "Дата начала", "description": "Дата начала сделки (YYYY-MM-DD)."},
+                    "CLOSEDATE": {"type": "string", "format": "date", "title": "Дата закрытия", "description": "Ожидаемая дата закрытия сделки (YYYY-MM-DD)."},
+                    "OPENED": {"type": "string", "title": "Доступна всем", "description": "Доступна ли сделка всем пользователям (Y/N)."},
+                    "CLOSED": {"type": "string", "title": "Закрыта", "description": "Пометка о закрытии сделки (Y/N)."},
+                    "COMMENTS": {"type": "string", "title": "Комментарий", "description": "Комментарий к сделке (поддерживаются bb-коды)."},
+                    "ASSIGNED_BY_ID": {"type": "integer", "title": "Ответственный (ID)", "description": "ID пользователя, ответственного за сделку."},
+                    "SOURCE_ID": {"type": "string", "title": "Источник", "description": "Строковый идентификатор источника сделки."},
+                    "SOURCE_DESCRIPTION": {"type": "string", "title": "Описание источника", "description": "Дополнительная информация об источнике поступления сделки."},
+                    "ADDITIONAL_INFO": {"type": "string", "title": "Дополнительно", "description": "Дополнительная информация о сделке."},
+                    "LOCATION_ID": {"type": "string", "title": "Локация", "description": "Местоположение клиента (системное поле)."},
+                    "ORIGINATOR_ID": {"type": "string", "title": "Источник данных (ID)", "description": "Идентификатор источника данных (originator)."},
+                    "ORIGIN_ID": {"type": "string", "title": "ID во внешней системе", "description": "Идентификатор записи во внешней системе."},
+                    "UTM_SOURCE": {"type": "string", "title": "UTM: Источник", "description": "Источник трафика для аналитики (utm_source)."},
+                    "UTM_MEDIUM": {"type": "string", "title": "UTM: Канал", "description": "Тип трафика (CPC, CPM и т.д.)."},
+                    "UTM_CAMPAIGN": {"type": "string", "title": "UTM: Кампания", "description": "Название рекламной кампании (utm_campaign)."},
+                    "UTM_CONTENT": {"type": "string", "title": "UTM: Контент", "description": "Контент кампании (utm_content)."},
+                    "UTM_TERM": {"type": "string", "title": "UTM: Поиск", "description": "Ключевое слово кампании (utm_term)."},
+                    "TRACE": {"type": "string", "title": "Trace / Аналитика", "description": "Информация для аналитики или sales intelligence."},
                     # relationship fields and custom fields
-                    "PARENT_ID_*": {"type": "string", "title": "PARENT_ID_*", "description": "Relationship fields, use PARENT_ID_{entityId} for SPA relationships."},
-                    "custom_fields": {"type": "object", "title": "Custom fields (UF_CRM_...)", "description": "Use for UF_CRM_* custom fields and any additional mapping."},
+                    "PARENT_ID_*": {"type": "string", "title": "Связи (PARENT_ID_*)", "description": "Поля связей: используйте PARENT_ID_{entityId} для связей между сущностями."},
+                    "custom_fields": {"type": "object", "title": "Пользовательские поля (UF_CRM_...)", "description": "Используйте для кастомных полей UF_CRM_* и дополнительного маппинга."},
                     # keep params as separate group too (optional)
                     "params": {
                         "type": "object",
-                        "title": "Params",
-                        "description": "Additional method parameters (if needed).",
+                        "title": "Параметры",
+                        "description": "Дополнительные параметры метода (необязательно).",
                         "properties": {
-                            "OPENED": {"type": "string", "title": "OPENED", "description": "Is the deal available to everyone. Y/N."},
-                            "CLOSED": {"type": "string", "title": "CLOSED", "description": "Is the deal closed. Y/N."},
-                            "BEGINDATE": {"type": "string", "format": "date", "title": "BEGINDATE", "description": "Start date."},
-                            "CLOSEDATE": {"type": "string", "format": "date", "title": "CLOSEDATE", "description": "Completion date."}
+                            "OPENED": {"type": "string", "title": "Доступна всем", "description": "Доступна ли сделка всем (Y/N)."},
+                            "CLOSED": {"type": "string", "title": "Закрыта", "description": "Пометка о закрытии сделки (Y/N)."},
+                            "BEGINDATE": {"type": "string", "format": "date", "title": "Дата начала", "description": "Дата начала (YYYY-MM-DD)."},
+                            "CLOSEDATE": {"type": "string", "format": "date", "title": "Дата закрытия", "description": "Дата закрытия (YYYY-MM-DD)."}
                         },
                         "additionalProperties": True
                     }
@@ -84,8 +84,8 @@ class Bitrix24CreateDealIntegration(BaseIntegration):
             credentials_strategy="oauth",
             examples=[
                 {
-                    "title": "Create deal with title, opportunity and currency",
-                    "config": {"TITLE": "New deal", "OPPORTUNITY": 1000, "CURRENCY_ID": "USD"},
+                    "title": "Создать сделку: название, сумма и валюта",
+                    "config": {"TITLE": "Новая сделка", "OPPORTUNITY": 1000, "CURRENCY_ID": "USD"},
                 }
             ],
         )
@@ -113,6 +113,17 @@ class Bitrix24CreateDealIntegration(BaseIntegration):
         payload = creds.get("payload", {}) if isinstance(creds, dict) else {}
         if not payload:
             payload = creds
+
+        # Variables support for playback: accept `variables` or `context` in config
+        vars_input = config.get("variables") or config.get("context") or {}
+        if isinstance(vars_input, str):
+            try:
+                import json as _json
+
+                vars_input = _json.loads(vars_input)
+            except Exception:
+                vars_input = {}
+        variables = vars_input if isinstance(vars_input, dict) else {}
 
         # Backwards-compatible: accept either `fields` object or individual top-level properties
         params = config.get("params")
@@ -214,8 +225,13 @@ class Bitrix24CreateDealIntegration(BaseIntegration):
                 if webhook_url:
                     try:
                         url = webhook_url.rstrip("/") + "/crm.deal.add"
+                        # publish last_request with variables for playback/debugging
+                        await logger.send_variables({"bot.last_request": {"url": url, "params": None, "data": request_data, "variables": variables}})
+                        await logger.info(f"bot.last_request: {request_data}")
                         resp = await client.post(url, json=request_data)
                         handled = await _handle_response(resp)
+                        # publish response including variables
+                        await logger.send_variables({"bot.last_response": {"ok": handled.get("ok"), "result": handled.get("result"), "error": handled.get("error"), "variables": variables}})
                         if handled.get("ok"):
                             return {"response": {"ok": True, "result": handled.get("result")}}
                         else:
@@ -232,8 +248,13 @@ class Bitrix24CreateDealIntegration(BaseIntegration):
 
                         url = f"{base}/rest/crm.deal.add.json"
                         params_q = {"auth": access_token}
+                        # publish last_request with variables for playback/debugging
+                        await logger.send_variables({"bot.last_request": {"url": url, "params": params_q, "data": request_data, "variables": variables}})
+                        await logger.info(f"bot.last_request: {request_data}")
                         resp = await client.post(url, params=params_q, json=request_data)
                         handled = await _handle_response(resp)
+                        # publish response including variables
+                        await logger.send_variables({"bot.last_response": {"ok": handled.get("ok"), "result": handled.get("result"), "error": handled.get("error"), "variables": variables}})
                         if handled.get("ok"):
                             return {"response": {"ok": True, "result": handled.get("result")}}
                         else:
