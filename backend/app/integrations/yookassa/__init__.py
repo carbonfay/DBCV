@@ -1,0 +1,5 @@
+"""
+YooKassa action-style integrations.
+"""
+
+
