@@ -3,7 +3,7 @@
 try:
     from app.integrations.telegram import *  # noqa: F401, F403
 except ImportError:
-    # Библиотека не установлена, пропускаем
+    # Библиотека не установлена, пропускаемаа
     pass
 
 # Внутренние интеграции DBCV
