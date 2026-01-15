@@ -1,0 +1,3 @@
+"""Package for Medicine-related integration modules."""
+
+__all__ = []
