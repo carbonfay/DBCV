@@ -15,6 +15,9 @@ services:
       - "8003:8003"
     volumes:
       - ./backend/:/backend/
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     restart: always
     command: sh -c "alembic upgrade head && python initial_data.py && python main.py"
     depends_on:

@@ -7,4 +7,9 @@ except ImportError:
     pass
 
 # Внутренние интеграции DBCV
+try:
+    from app.integrations.WB import *  # noqa: F401, F403
+except ImportError:
+    pass
+
 from app.integrations.dbcv import *  # noqa: F401, F403
