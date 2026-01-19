@@ -1,10 +1,26 @@
-"""Интеграции с внешними сервисами."""
-# Автоматическая регистрация интеграций при импорте
-try:
-    from app.integrations.telegram import *  # noqa: F401, F403
-except ImportError:
-    # Библиотека не установлена, пропускаем
-    pass
+"""Интеграции с внешними сервисами.
 
-# Внутренние интеграции DBCV
+Вместо явного перечисления модулей делаем рекурсивный импорт всех
+подмодулей внутри пакета `app.integrations` — это устойчиво к
+добавлению новых подпакетов (например `medicine`).
+"""
+import importlib
+import pkgutil
+
+
+def _import_all_integrations():
+    pkg = importlib.import_module(__name__)
+    for finder, name, ispkg in pkgutil.walk_packages(pkg.__path__, pkg.__name__ + "."):
+        try:
+            importlib.import_module(name)
+        except Exception:
+            # Не прерываем стартап из-за одной неработающей интеграции
+            # — она просто не зарегистрируется в реестре.
+            pass
+
+
+# Запускаем динамический импорт
+_import_all_integrations()
+
+# Внутренние интеграции DBCV (оставляем без изменений)
 from app.integrations.dbcv import *  # noqa: F401, F403
