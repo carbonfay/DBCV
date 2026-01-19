@@ -14,6 +14,9 @@ from app.schemas import rebuild_models
 
 rebuild_models()
 
+# Ensure integrations package is imported at startup so integrations register themselves
+import app.integrations  # noqa: F401
+
 from app.api.main import api_router
 from app.api.routes.media import router as media_router
 from app.api.routes import sockets
