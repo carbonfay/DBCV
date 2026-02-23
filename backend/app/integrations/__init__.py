@@ -5,6 +5,10 @@ try:
 except ImportError:
     # Библиотека не установлена, пропускаем
     pass
+try:
+    from app.integrations.yookassa import *  # noqa: F401, F403
+except ImportError:
+    pass
 
 # Внутренние интеграции DBCV
 from app.integrations.dbcv import *  # noqa: F401, F403
