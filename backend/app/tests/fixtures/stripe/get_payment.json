@@ -1,0 +1,18 @@
+{
+  "config": {
+    "charge_id": "ch_test_123",
+    "expand": ["balance_transaction"]
+  },
+  "credentials": {
+    "payload": {
+      "api_key": "sk_test_123"
+    }
+  },
+  "charge": {
+    "id": "ch_test_123",
+    "amount": 1000,
+    "currency": "usd",
+    "status": "succeeded",
+    "paid": true
+  }
+}
