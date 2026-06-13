@@ -6,5 +6,11 @@ except ImportError:
     # Библиотека не установлена, пропускаем
     pass
 
+try:
+    from app.integrations.bitrix24 import *
+except ImportError:
+    pass
+
 # Внутренние интеграции DBCV
 from app.integrations.dbcv import *  # noqa: F401, F403
+
