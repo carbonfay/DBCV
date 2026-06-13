@@ -8,3 +8,14 @@ except ImportError:
 
 # Внутренние интеграции DBCV
 from app.integrations.dbcv import *  # noqa: F401, F403
+
+"""Интеграции с внешними сервисами."""
+# Автоматическая регистрация интеграций при импорте
+try:
+    from app.integrations.crm2 import *  # noqa: F401, F403
+except ImportError:
+    # Библиотека не установлена, пропускаем
+    pass
+
+# Внутренние интеграции DBCV
+from app.integrations.dbcv import *  # noqa: F401, F403
