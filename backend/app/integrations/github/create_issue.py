@@ -204,6 +204,14 @@ class GithubCreateIssueIntegration(BaseIntegration):
                 try:
                     error_data = response.json()
                     error_message = error_data.get("message", response.text)
+                    # GitHub в случае 422 отдаёт детали в массиве errors
+                    error_details = error_data.get("errors")
+                    if error_details:
+                        details = "; ".join(
+                            f"{err.get('field', 'unknown')}: {err.get('message') or err.get('code')}"
+                            for err in error_details
+                        )
+                        error_message = f"{error_message} [{details}]"
                 except Exception:
                     error_message = response.text
                 await logger.error(f"GitHub API error: {error_message}")
