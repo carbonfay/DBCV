@@ -104,6 +104,17 @@ def _get_all_providers() -> List[ProviderInfo]:
             }
         ),
         ProviderInfo(
+            value="stripe",
+            label="Stripe",
+            description="Stripe Payments API",
+            supported_strategies=["api_key"],
+            payload_examples={
+                "api_key": {
+                    "secret_key": "sk_test_YOUR_KEY_HERE"
+                }
+            }
+        ),
+        ProviderInfo(
             value="discord",
             label="Discord",
             description="Discord Bot API",
