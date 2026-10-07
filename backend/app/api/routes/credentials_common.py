@@ -104,6 +104,17 @@ def _get_all_providers() -> List[ProviderInfo]:
             }
         ),
         ProviderInfo(
+            value="github",
+            label="GitHub",
+            description="GitHub REST API",
+            supported_strategies=["api_key"],
+            payload_examples={
+                "api_key": {
+                    "access_token": "ghp_YOUR_TOKEN_HERE"
+                }
+            }
+        ),
+        ProviderInfo(
             value="discord",
             label="Discord",
             description="Discord Bot API",
