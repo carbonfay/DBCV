@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/devdaemon/MTI_practice/DBCV_Builder/**)",
+      "Read(//home/devdaemon/MTI_practice/DBCV_Builder/frontend/app/**)"
+    ]
+  }
+}
